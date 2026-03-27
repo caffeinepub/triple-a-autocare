@@ -15,6 +15,7 @@ import type { UserProfile } from "../backend";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
 import {
   useAcceptServiceRequest,
+  useMechanicActiveJob,
   useSearchingRequests,
 } from "../hooks/useQueries";
 import { playNewRequest } from "../utils/sounds";
@@ -32,11 +33,13 @@ function RequestCard({
   onAccept,
   onDecline,
   index,
+  disabled,
 }: {
   request: ExtendedServiceRequest;
   onAccept: (id: string) => void;
   onDecline: (id: string) => void;
   index: number;
+  disabled: boolean;
 }) {
   return (
     <motion.div
@@ -79,7 +82,10 @@ function RequestCard({
           type="button"
           data-ocid={`mechanic.accept.primary_button.${index + 1}`}
           onClick={() => onAccept(request.id)}
-          className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-green-500 hover:bg-green-600 active:scale-[0.97] text-white font-semibold text-sm transition-all"
+          disabled={disabled}
+          className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-green-500 hover:bg-green-600 active:scale-[0.97] text-white font-semibold text-sm transition-all${
+            disabled ? " opacity-50 cursor-not-allowed" : ""
+          }`}
         >
           <Check className="w-4 h-4" />
           Accept
@@ -88,7 +94,10 @@ function RequestCard({
           type="button"
           data-ocid={`mechanic.decline.delete_button.${index + 1}`}
           onClick={() => onDecline(request.id)}
-          className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-red-500 hover:bg-red-600 active:scale-[0.97] text-white font-semibold text-sm transition-all"
+          disabled={disabled}
+          className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-red-500 hover:bg-red-600 active:scale-[0.97] text-white font-semibold text-sm transition-all${
+            disabled ? " opacity-50 cursor-not-allowed" : ""
+          }`}
         >
           <X className="w-4 h-4" />
           Decline
@@ -107,8 +116,15 @@ export default function MechanicDashboard({ profile }: MechanicDashboardProps) {
   const [declined, setDeclined] = useState<Set<string>>(new Set());
 
   const { data: searchingRequests, isLoading } = useSearchingRequests();
+  const { data: activeJob } = useMechanicActiveJob();
   const acceptServiceRequest = useAcceptServiceRequest();
   const queryClient = useQueryClient();
+
+  const hasActiveJob =
+    !!activeJob &&
+    !["completed", "cancelled"].includes(activeJob.status as string);
+
+  console.log("[MechanicDashboard] active job count:", hasActiveJob ? 1 : 0);
 
   const firstName = profile.name.split(" ")[0];
   const requests = (searchingRequests ?? []).filter((r) => !declined.has(r.id));
@@ -128,6 +144,10 @@ export default function MechanicDashboard({ profile }: MechanicDashboardProps) {
   }, [requests.length, isOnline]);
 
   const handleAccept = async (id: string) => {
+    if (hasActiveJob) {
+      toast.error("You have an ongoing job. Complete it first.");
+      return;
+    }
     console.log("[AcceptJob] requestId:", id, "mechanicName:", profile.name);
     try {
       await acceptServiceRequest.mutateAsync({
@@ -214,6 +234,12 @@ export default function MechanicDashboard({ profile }: MechanicDashboardProps) {
         </motion.div>
       </header>
 
+      {hasActiveJob && (
+        <div className="mx-5 mb-2 px-4 py-3 rounded-2xl bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 text-sm font-semibold text-center">
+          You have an ongoing job
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 px-5 pb-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-foreground">
@@ -264,6 +290,7 @@ export default function MechanicDashboard({ profile }: MechanicDashboardProps) {
                   index={i}
                   onAccept={handleAccept}
                   onDecline={handleDecline}
+                  disabled={hasActiveJob}
                 />
               ))
             )}

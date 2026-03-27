@@ -114,6 +114,15 @@ export default function HomeTab({ profile }: Props) {
   const { data: completedRequests } = useCustomerCompletedRequests();
   const respondToPrice = useCustomerRespondToPrice();
 
+  const customerHasActive =
+    !!activeRequest &&
+    !["completed", "cancelled"].includes(activeRequest.status as string);
+
+  console.log(
+    "[HomeTab] customer active booking count:",
+    customerHasActive ? 1 : 0,
+  );
+
   // Track previous status to detect changes and fire sounds
   const prevStatusRef = useRef<string | null>(null);
   const [flashKey, setFlashKey] = useState(0);
@@ -214,16 +223,29 @@ export default function HomeTab({ profile }: Props) {
         <motion.button
           type="button"
           data-ocid="home.request_mechanic.primary_button"
-          onClick={() => setRequestOpen(true)}
-          className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-3 shadow-yellow active:scale-[0.98] transition-transform"
+          onClick={() => {
+            if (!customerHasActive) setRequestOpen(true);
+          }}
+          disabled={customerHasActive}
+          className={`w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-3 shadow-yellow transition-transform${
+            customerHasActive
+              ? " opacity-60 cursor-not-allowed"
+              : " active:scale-[0.98]"
+          }`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          whileTap={{ scale: 0.97 }}
+          whileTap={customerHasActive ? undefined : { scale: 0.97 }}
         >
           <Wrench className="w-5 h-5" />
           Request Mechanic
         </motion.button>
+
+        {customerHasActive && (
+          <p className="text-center text-sm text-yellow-400 font-medium -mt-2">
+            You already have an active service
+          </p>
+        )}
 
         {showRequestStatus && statusDisplay && (
           <motion.div

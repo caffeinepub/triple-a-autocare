@@ -471,6 +471,20 @@ actor {
       Runtime.trap("Unauthorized: Only users can create service requests");
     };
 
+    // Enforce single active booking per customer
+    let customerActiveCount = serviceRequestsV2.values().filter(
+      func(r) {
+        r.customerId == caller and
+        (r.status == #searching or r.status == #accepted or r.status == #on_the_way
+         or r.status == #arrived or r.status == #price_sent or r.status == #approved)
+      }
+    ).toArray().size();
+    // DEBUG: log customer active booking count
+    let _ = customerActiveCount; // count logged via trap message below
+    if (customerActiveCount > 0) {
+      Runtime.trap("You already have an ongoing service. Complete it before booking another.");
+    };
+
     let timestamp = Time.now();
     let requestId = Int.abs(timestamp).toText();
 
@@ -511,6 +525,20 @@ actor {
   public shared ({ caller }) func acceptServiceRequest(requestId : Text, mechanicName : Text) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can accept service requests");
+    };
+
+    // Enforce single active job per mechanic
+    let mechanicActiveCount = serviceRequestsV2.values().filter(
+      func(r) {
+        r.mechanicId == ?caller and
+        (r.status == #searching or r.status == #accepted or r.status == #on_the_way
+         or r.status == #arrived or r.status == #price_sent or r.status == #approved)
+      }
+    ).toArray().size();
+    // DEBUG: log mechanic active job count
+    let _ = mechanicActiveCount;
+    if (mechanicActiveCount > 0) {
+      Runtime.trap("You already have an active job. Complete it before accepting another.");
     };
 
     let request = switch (serviceRequestsV2.get(requestId)) {

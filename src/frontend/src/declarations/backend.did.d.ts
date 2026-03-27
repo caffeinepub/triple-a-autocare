@@ -109,6 +109,7 @@ export interface _SERVICE {
   'getPart' : ActorMethod<[string], Part>,
   'getReviews' : ActorMethod<[string], Array<Review>>,
   'getSearchingRequests' : ActorMethod<[], Array<ServiceRequest>>,
+  'getServiceRequests' : ActorMethod<[], Array<ServiceRequest>>,
   'getUserBookings' : ActorMethod<[], Array<Booking>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
@@ -123,6 +124,14 @@ export interface _SERVICE {
         { 'pending' : null } |
         { 'completed' : null } |
         { 'confirmed' : null },
+    ],
+    undefined
+  >,
+  'updateServiceRequest' : ActorMethod<
+    [
+      string,
+      bigint,
+      { 'price_sent' : null },
     ],
     undefined
   >,
