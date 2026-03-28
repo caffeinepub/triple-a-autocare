@@ -1,25 +1,31 @@
 # Triple A AutoCare
 
 ## Current State
-Auth is handled exclusively via Internet Identity. LoginScreen shows two buttons: Customer and Mechanic, both triggering II. The useInternetIdentity hook manages identity state. Backend AccessControl assigns #user role on first initializeAccessControl call.
+- ChatScreen.tsx renders messages with `bg-primary` for own messages and `bg-card border border-border` for others
+- No spacing differentiation between messages beyond `gap-3`
+- BottomNav has no badge/notification indicator support
+- App.tsx manages chat state; no unread message tracking exists
+- MechanicJobsTab and BookingsTab show Chat buttons but no badge
 
 ## Requested Changes (Diff)
 
 ### Add
-- Email + password auth alongside Internet Identity
-- utils/emailAuth.ts: derives deterministic Ed25519 identity from email+password via PBKDF2
-- loginWithEmailIdentity on InternetIdentityContext
-- Email auth form in LoginScreen with login/signup toggle
+- Notification badge on Jobs tab (mechanic) and Bookings tab (customer) when a new chat message arrives
+- Unread message count tracking in App.tsx: poll `getMessages` for active chat requests and track last-seen count per requestId
+- Badge prop on BottomNav tabs so Jobs/Bookings can show a red dot or count bubble
 
 ### Modify
-- useInternetIdentity.ts: add loginWithEmailIdentity, handle clear for both auth methods
-- LoginScreen.tsx: show both Continue with Google and Continue with Email
+- ChatScreen.tsx message bubbles:
+  - Own messages: align right, bright yellow background (`bg-yellow-400 text-black`), `rounded-2xl rounded-br-sm`
+  - Other messages: align left, dark gray background (`bg-zinc-700 text-white`) or light yellow (`bg-yellow-50 text-zinc-900`), `rounded-2xl rounded-bl-sm`
+  - Add `mb-2` or `gap-3` spacing between messages
+  - Keep timestamps small (`text-[10px] text-muted-foreground`)
+- BottomNav: accept optional `badges` prop (Record of tab id → number) to show a small red circle badge on the tab icon
 
 ### Remove
-- Nothing; all existing II flows stay intact
+- Nothing removed
 
 ## Implementation Plan
-1. Create utils/emailAuth.ts with PBKDF2 + Ed25519KeyIdentity derivation
-2. Extend useInternetIdentity.ts context with loginWithEmailIdentity
-3. Rewrite LoginScreen.tsx with email form + login/signup toggle
-4. Email signup defaults pending-role to customer
+1. Update ChatScreen.tsx: own messages bright yellow bg + black text, other messages dark gray bg + white text, spacing mb-2 between bubbles, timestamps unchanged
+2. Update BottomNav: add optional `badges` prop to NavBar and customer/mechanic nav components; render a small absolute-positioned red dot/count on icon when badge > 0
+3. In App.tsx: track `unreadChatCount` for active requestId using a polling interval on getMessages — compare to last-seen count; clear when chat is opened; pass badge count to BottomNav

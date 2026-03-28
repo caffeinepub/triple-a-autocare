@@ -92,7 +92,7 @@ export default function ChatScreen({
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
         {isLoading ? (
           <div className="flex justify-center py-10">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -124,10 +124,10 @@ export default function ChatScreen({
                 }`}
               >
                 <div
-                  className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  className={`max-w-[75%] px-4 py-2.5 text-sm leading-relaxed ${
                     isOwnMessage
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-card border border-border text-foreground rounded-bl-sm"
+                      ? "bg-yellow-400 text-black rounded-2xl rounded-br-sm"
+                      : "bg-zinc-700 text-white rounded-2xl rounded-bl-sm"
                   }`}
                 >
                   {msg.message}
