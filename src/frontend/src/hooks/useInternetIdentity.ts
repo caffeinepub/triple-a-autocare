@@ -14,6 +14,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { loadConfig } from "../config";
@@ -56,6 +57,9 @@ export type InternetIdentityContext = {
   isLoginError: boolean;
 
   loginError?: Error;
+
+  /** Login with a pre-derived email-based Ed25519 identity. Bypasses AuthClient. */
+  loginWithEmailIdentity: (emailIdentity: Identity) => void;
 };
 
 const ONE_HOUR_IN_NANOSECONDS = BigInt(3_600_000_000_000);
@@ -155,6 +159,7 @@ export function InternetIdentityProvider({
   const [identity, setIdentity] = useState<Identity | undefined>(undefined);
   const [loginStatus, setStatus] = useState<Status>("initializing");
   const [loginError, setError] = useState<Error | undefined>(undefined);
+  const isEmailAuthRef = useRef(false);
 
   const setErrorMessage = useCallback((message: string) => {
     setStatus("loginError");
@@ -177,6 +182,13 @@ export function InternetIdentityProvider({
     },
     [setErrorMessage],
   );
+
+  const loginWithEmailIdentity = useCallback((emailIdentity: Identity) => {
+    isEmailAuthRef.current = true;
+    setIdentity(emailIdentity);
+    setStatus("success");
+    setError(undefined);
+  }, []);
 
   const login = useCallback(() => {
     if (!authClient) {
@@ -208,6 +220,15 @@ export function InternetIdentityProvider({
   }, [authClient, handleLoginError, handleLoginSuccess, setErrorMessage]);
 
   const clear = useCallback(() => {
+    // Email auth: just reset state, no AuthClient logout needed
+    if (isEmailAuthRef.current) {
+      isEmailAuthRef.current = false;
+      setIdentity(undefined);
+      setStatus("idle");
+      setError(undefined);
+      return;
+    }
+
     if (!authClient) {
       setErrorMessage("Auth client not initialized");
       return;
@@ -276,8 +297,9 @@ export function InternetIdentityProvider({
       isLoginSuccess: loginStatus === "success",
       isLoginError: loginStatus === "loginError",
       loginError,
+      loginWithEmailIdentity,
     }),
-    [identity, login, clear, loginStatus, loginError],
+    [identity, login, clear, loginStatus, loginError, loginWithEmailIdentity],
   );
 
   return createElement(InternetIdentityReactContext.Provider, {

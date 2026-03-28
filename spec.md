@@ -1,26 +1,25 @@
 # Triple A AutoCare
 
 ## Current State
-The app has a unified ServiceRequest model. Mechanics can accept multiple jobs simultaneously, and customers can create multiple requests at once — no enforcement of one-at-a-time.
+Auth is handled exclusively via Internet Identity. LoginScreen shows two buttons: Customer and Mechanic, both triggering II. The useInternetIdentity hook manages identity state. Backend AccessControl assigns #user role on first initializeAccessControl call.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Backend: active-job check in `acceptServiceRequest` — if mechanic already has a request with status in ACTIVE_STATUSES, trap with error message
-- Backend: active-booking check in `createServiceRequest` — if customer already has a request with status in ACTIVE_STATUSES, trap with error message
-- Frontend (MechanicDashboard): banner "You have an ongoing job" + disabled Accept buttons when mechanic has active job
-- Frontend (HomeTab): disabled "Request Mechanic" button + inline message "You already have an active service" when customer has active request
+- Email + password auth alongside Internet Identity
+- utils/emailAuth.ts: derives deterministic Ed25519 identity from email+password via PBKDF2
+- loginWithEmailIdentity on InternetIdentityContext
+- Email auth form in LoginScreen with login/signup toggle
 
 ### Modify
-- `acceptServiceRequest` — add pre-check before updating status
-- `createServiceRequest` — add pre-check before inserting new request
-- `MechanicDashboard.tsx` — consume `useMechanicActiveJob`, gate UI
-- `HomeTab.tsx` — gate Request Mechanic button on `activeRequest` presence
+- useInternetIdentity.ts: add loginWithEmailIdentity, handle clear for both auth methods
+- LoginScreen.tsx: show both Continue with Google and Continue with Email
 
 ### Remove
-- Nothing removed
+- Nothing; all existing II flows stay intact
 
 ## Implementation Plan
-1. In `main.mo`: define ACTIVE_STATUSES helper inline; add mechanic check in `acceptServiceRequest`; add customer check in `createServiceRequest`
-2. In `MechanicDashboard.tsx`: import `useMechanicActiveJob`; show banner and disable Accept buttons when active job exists; log active job count
-3. In `HomeTab.tsx`: disable Request Mechanic button and show inline message when `activeRequest` is non-null and non-terminal; log active booking count
+1. Create utils/emailAuth.ts with PBKDF2 + Ed25519KeyIdentity derivation
+2. Extend useInternetIdentity.ts context with loginWithEmailIdentity
+3. Rewrite LoginScreen.tsx with email form + login/signup toggle
+4. Email signup defaults pending-role to customer
