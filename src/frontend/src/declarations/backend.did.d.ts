@@ -30,6 +30,7 @@ export interface ChatMessage {
   'senderId' : Principal,
   'senderRole' : string,
   'message' : string,
+  'isRead' : boolean,
   'createdAt' : Time,
 }
 export interface Mechanic {
@@ -134,6 +135,7 @@ export interface _SERVICE {
   'saveCallerUserAppRole' : ActorMethod<[string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'seedData' : ActorMethod<[], undefined>,
+  'markMessagesRead' : ActorMethod<[string], undefined>,
   'sendMessage' : ActorMethod<[string, string], undefined>,
   'submitServicePrice' : ActorMethod<[string, bigint], undefined>,
   'updateBookingStatus' : ActorMethod<

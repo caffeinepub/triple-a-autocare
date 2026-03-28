@@ -29,15 +29,19 @@ import { Variant_cancelled_pending_completed_confirmed } from "../backend";
 import type { Booking } from "../backend";
 import MechanicRequestModal from "../components/MechanicRequestModal";
 import ReviewModal from "../components/ReviewModal";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
+  countUnread,
   useCancelServiceRequest,
   useCustomerActiveRequest,
   useCustomerCompletedRequests,
   useCustomerRespondToPrice,
+  useGetMessages,
   useMechanics,
   useUserBookings,
 } from "../hooks/useQueries";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
+import { getEmailIdentity } from "../utils/emailIdentityStore";
 import {
   playMechanicFound,
   playPriceUpdate,
@@ -94,12 +98,18 @@ const STATUS_COLORS: Record<string, string> = {
 function ActiveRequestCard({
   request,
   onOpenChat,
+  currentUserId,
 }: {
   request: ExtendedServiceRequest;
   onOpenChat: (id: string, name: string) => void;
+  currentUserId: string;
 }) {
   const respondToPrice = useCustomerRespondToPrice();
   const cancelRequest = useCancelServiceRequest();
+  const { data: chatMessages } = useGetMessages(request.id);
+  const unreadCount = chatMessages
+    ? countUnread(chatMessages, currentUserId)
+    : 0;
   const prevStatusRef = useRef<string>(request.status);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
@@ -216,10 +226,15 @@ function ActiveRequestCard({
             onClick={() =>
               onOpenChat(request.id, request.mechanicName ?? "Mechanic")
             }
-            className="w-full py-3 rounded-2xl border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-2xl border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform relative"
           >
             <MessageCircle className="w-4 h-4" />
             Chat with Mechanic
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-3 min-w-[18px] h-[18px] bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold px-1">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
         )}
 
@@ -483,6 +498,10 @@ function BookingCard({
 export default function BookingsTab({
   onOpenChat,
 }: { onOpenChat?: (requestId: string, name: string) => void }) {
+  const { identity: iiIdentity } = useInternetIdentity();
+  const emailIdentity = getEmailIdentity();
+  const identity = emailIdentity ?? iiIdentity;
+  const currentUserId = identity?.getPrincipal().toString() ?? "";
   const { data: bookings, isLoading: bookingsLoading } = useUserBookings();
   const { data: mechanics } = useMechanics();
   const { data: activeRequest, isLoading: requestLoading } =
@@ -555,6 +574,7 @@ export default function BookingsTab({
             <ActiveRequestCard
               request={activeRequest}
               onOpenChat={onOpenChat ?? ((_id, _name) => {})}
+              currentUserId={currentUserId}
             />
           ) : (
             <div

@@ -78,6 +78,7 @@ export interface ChatMessage {
     senderId: Principal;
     senderRole: string;
     message: string;
+    isRead: boolean;
     createdAt: Time;
 }
 export enum UserRole {
@@ -138,6 +139,7 @@ export interface backendInterface {
     saveCallerUserAppRole(role: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     seedData(): Promise<void>;
+    markMessagesRead(requestId: string): Promise<void>;
     sendMessage(requestId: string, message: string): Promise<void>;
     submitServicePrice(requestId: string, price: bigint): Promise<void>;
     updateBookingStatus(bookingId: string, newStatus: Variant_cancelled_pending_completed_confirmed): Promise<void>;

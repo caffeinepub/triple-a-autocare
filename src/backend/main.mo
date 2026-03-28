@@ -300,6 +300,22 @@ actor {
         serviceRequestsV4.add(req.id, migrated);
       };
     };
+
+    // Migrate ChatMessage V1 → V2 (add isRead field)
+    for (msg in chatMessages.values()) {
+      if (chatMessagesV2.get(msg.id) == null) {
+        let migrated : ChatMessage = {
+          id = msg.id;
+          requestId = msg.requestId;
+          senderId = msg.senderId;
+          senderRole = msg.senderRole;
+          message = msg.message;
+          isRead = true; // old messages treated as already read
+          createdAt = msg.createdAt;
+        };
+        chatMessagesV2.add(msg.id, migrated);
+      };
+    };
   };
 
   func getMechanicInternal(id : Text) : Mechanic {
@@ -948,7 +964,8 @@ actor {
   // Chat
   // -------------------------------------------------------------------------
 
-  type ChatMessage = {
+  // V1 — original ChatMessage without isRead (kept for migration)
+  type ChatMessageV1 = {
     id : Text;
     requestId : Text;
     senderId : Principal;
@@ -957,7 +974,24 @@ actor {
     createdAt : Time.Time;
   };
 
-  let chatMessages = Map.empty<Text, ChatMessage>();
+  // V2 — current ChatMessage with isRead field
+  type ChatMessage = {
+    id : Text;
+    requestId : Text;
+    senderId : Principal;
+    senderRole : Text;
+    message : Text;
+    isRead : Bool;
+    createdAt : Time.Time;
+  };
+
+  // V1 storage — kept for migration only
+  let chatMessages = Map.empty<Text, ChatMessageV1>();
+
+  // V2 storage — current version with isRead
+  let chatMessagesV2 = Map.empty<Text, ChatMessage>();
+
+
 
   public shared ({ caller }) func sendMessage(requestId : Text, message : Text) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
@@ -985,9 +1019,10 @@ actor {
       senderId = caller;
       senderRole;
       message;
+      isRead = false; // receiver has not read it yet
       createdAt = timestamp;
     };
-    chatMessages.add(msgId, msg);
+    chatMessagesV2.add(msgId, msg);
   };
 
   public query ({ caller }) func getMessages(requestId : Text) : async [ChatMessage] {
@@ -1004,7 +1039,7 @@ actor {
       Runtime.trap("Unauthorized: Not a participant in this service request");
     };
 
-    let msgs = chatMessages.values().filter(
+    let msgs = chatMessagesV2.values().filter(
       func(m) { Text.equal(m.requestId, requestId) }
     );
     let arr = msgs.toArray();
@@ -1013,5 +1048,29 @@ actor {
         Int.compare(a.createdAt, b.createdAt)
       }
     );
+  };
+
+  // Mark all messages in a request as read for the caller (caller = receiver)
+  public shared ({ caller }) func markMessagesRead(requestId : Text) : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized");
+    };
+
+    let request = switch (serviceRequestsV4.get(requestId)) {
+      case (null) { Runtime.trap("Service request not found") };
+      case (?r) { r };
+    };
+
+    if (request.customerId != caller and request.mechanicId != ?caller) {
+      Runtime.trap("Unauthorized: Not a participant in this service request");
+    };
+
+    // Mark as read all messages NOT sent by the caller (i.e. messages received by caller)
+    for (msg in chatMessagesV2.values()) {
+      if (Text.equal(msg.requestId, requestId) and msg.senderId != caller and not msg.isRead) {
+        let updated : ChatMessage = { msg with isRead = true };
+        chatMessagesV2.add(msg.id, updated);
+      };
+    };
   };
 };

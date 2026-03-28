@@ -15,13 +15,16 @@ import type { UserProfile } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
 import {
+  countUnread,
   useCancelServiceRequest,
   useCompleteJob,
+  useGetMessages,
   useGetServiceRequests,
   useMechanicCompletedJobs,
   useUpdateServiceRequest,
   useUpdateServiceRequestStatus,
 } from "../hooks/useQueries";
+import { getEmailIdentity } from "../utils/emailIdentityStore";
 import { playSoftNotification } from "../utils/sounds";
 
 const ACTIVE_STATUSES = new Set([
@@ -178,14 +181,20 @@ function CancelJobModal({
 function ActiveJobCard({
   job,
   onOpenChat,
+  currentUserId,
 }: {
   job: ExtendedServiceRequest;
   onOpenChat: (id: string, name: string) => void;
+  currentUserId: string;
 }) {
   const updateStatus = useUpdateServiceRequestStatus();
   const updateServiceRequest = useUpdateServiceRequest();
   const completeJob = useCompleteJob();
   const cancelJob = useCancelServiceRequest();
+  const { data: chatMessages } = useGetMessages(job.id);
+  const unreadCount = chatMessages
+    ? countUnread(chatMessages, currentUserId)
+    : 0;
   const [priceInput, setPriceInput] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -340,10 +349,15 @@ function ActiveJobCard({
             type="button"
             data-ocid="jobs.chat.button"
             onClick={() => onOpenChat(job.id, job.customerName ?? "Customer")}
-            className="w-full py-3 rounded-2xl border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-2xl border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform relative"
           >
             <MessageCircle className="w-4 h-4" />
             Chat with Customer
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-3 min-w-[18px] h-[18px] bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold px-1">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
         )}
 
@@ -634,6 +648,12 @@ export default function MechanicJobsTab({
                   key={job.id}
                   job={job}
                   onOpenChat={onOpenChat ?? ((_id, _name) => {})}
+                  currentUserId={(() => {
+                    const emailId = getEmailIdentity();
+                    return (
+                      emailId?.getPrincipal().toString() ?? currentPrincipal
+                    );
+                  })()}
                 />
               ))}
             </div>

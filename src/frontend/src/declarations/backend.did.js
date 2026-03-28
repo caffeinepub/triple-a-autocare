@@ -95,6 +95,7 @@ export const ChatMessage = IDL.Record({
   'senderId' : IDL.Principal,
   'senderRole' : IDL.Text,
   'message' : IDL.Text,
+  'isRead' : IDL.Bool,
   'createdAt' : Time,
 });
 
@@ -314,7 +315,8 @@ export const idlFactory = ({ IDL }) => {
     'saveCallerUserAppRole' : IDL.Func([IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'seedData' : IDL.Func([], [], []),
-    'sendMessage' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'markMessagesRead' : IDL.Func([IDL.Text], [], []),
+  'sendMessage' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'submitServicePrice' : IDL.Func([IDL.Text, IDL.Nat], [], []),
     'updateBookingStatus' : IDL.Func(
         [

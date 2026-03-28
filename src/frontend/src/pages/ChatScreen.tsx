@@ -1,6 +1,10 @@
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useGetMessages, useSendMessage } from "../hooks/useQueries";
+import {
+  useGetMessages,
+  useMarkMessagesRead,
+  useSendMessage,
+} from "../hooks/useQueries";
 
 interface ChatScreenProps {
   requestId: string;
@@ -19,10 +23,19 @@ export default function ChatScreen({
 }: ChatScreenProps) {
   const { data: messages, isLoading } = useGetMessages(requestId);
   const sendMessage = useSendMessage();
+  const markRead = useMarkMessagesRead();
   const [input, setInput] = useState("");
   const [viewportOffset, setViewportOffset] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesCount = messages?.length ?? 0;
+
+  // Mark messages as read whenever we get new messages (chat is open)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: markRead.mutate is stable
+  useEffect(() => {
+    if (messagesCount > 0) {
+      markRead.mutate(requestId);
+    }
+  }, [messagesCount, requestId]);
 
   // Auto-scroll to latest message whenever message count changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: messagesCount triggers scroll

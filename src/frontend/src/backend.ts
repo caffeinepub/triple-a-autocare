@@ -113,6 +113,7 @@ export interface ChatMessage {
     senderId: Principal;
     senderRole: string;
     message: string;
+    isRead: boolean;
     createdAt: Time;
 }
 export interface Part {
@@ -225,6 +226,7 @@ export interface backendInterface {
     updateServiceRequest(requestId: string, price: bigint, status: "price_sent"): Promise<void>;
     updateServiceRequestStatus(requestId: string, newStatus: Variant_on_the_way_arrived_completed_accepted): Promise<void>;
     getMessages(requestId: string): Promise<Array<ChatMessage>>;
+    markMessagesRead(requestId: string): Promise<void>;
     sendMessage(requestId: string, message: string): Promise<void>;
 }
 import type { Booking as _Booking, ServiceRequest as _ServiceRequest, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
@@ -725,6 +727,7 @@ export class Backend implements backendInterface {
                     senderId: m.senderId,
                     senderRole: m.senderRole,
                     message: m.message,
+                    isRead: m.isRead ?? false,
                     createdAt: m.createdAt,
                 }));
             } catch (e) {
@@ -739,8 +742,23 @@ export class Backend implements backendInterface {
                 senderId: m.senderId,
                 senderRole: m.senderRole,
                 message: m.message,
+                isRead: m.isRead ?? false,
                 createdAt: m.createdAt,
             }));
+        }
+    }
+    async markMessagesRead(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.markMessagesRead(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.markMessagesRead(arg0);
+            return result;
         }
     }
     async sendMessage(arg0: string, arg1: string): Promise<void> {

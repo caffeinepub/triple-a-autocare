@@ -1,33 +1,39 @@
 # Triple A AutoCare
 
 ## Current State
-The app has a UserProfile model with `name`, `phone`, `location` (plain text). ServiceRequest has a `location` (plain text string). Onboarding collects name, phone, location. No lat/lng coordinates exist anywhere.
+Chat system is fully functional with sendMessage/getMessages. Unread badge uses a simple message-count comparison approach in App.tsx (not per-message read state). ChatMessage type has: id, requestId, senderId, senderRole, message, createdAt.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `latitude`, `longitude`, `address` optional fields to `UserProfile` backend type
-- `latitude`, `longitude`, `address` optional fields to `ServiceRequest` (V4 type + migration)
-- `latitude`, `longitude`, `address` optional params to `createServiceRequest` backend method
-- Geolocation button ("Use current location") on OnboardingScreen
-- Address display in active booking cards (BookingsTab) and active job cards (MechanicJobsTab)
+- `isRead: Bool` field to ChatMessage backend type (V1 migration → V2)
+- `markMessagesRead(requestId)` backend method — marks all messages in that request as read for the caller (i.e. messages where sender != caller)
+- `useMarkMessagesRead` hook in useQueries.ts
+- Per-request unread count computed on frontend from message.isRead === false && sender !== currentUser
+- Badge on job cards showing per-request unread count
 
 ### Modify
-- `UserProfile` type in backend: add `latitude : ?Float`, `longitude : ?Float`, `address : ?Text`
-- `ServiceRequest` type in backend: add V4 with location coords + migration V3→V4
-- `createServiceRequest`: add `latitude : ?Float`, `longitude : ?Float`, `address : ?Text` params
-- `OnboardingScreen`: role-aware label ("Workshop Location" for mechanic, "Home Address" for customer), geolocation button, collect lat/lng/address
-- `App.tsx`: pass `role` to `OnboardingScreen`, pass lat/lng/address through profile save
-- `MechanicRequestModal`: use profile address when available, pass lat/lng/address to createServiceRequest
-- `backend.d.ts`: update types for UserProfile, ServiceRequest, createServiceRequest
+- `sendMessage` — new messages stored with `isRead = false`
+- `getMessages` — returns messages with `isRead` field
+- `ChatMessage` type in backend.d.ts, backend.did.d.ts, backend.did.js, backend.ts to include `isRead: boolean`
+- `backendInterface` in backend.d.ts — add `markMessagesRead(requestId: string): Promise<void>`
+- `_SERVICE` in backend.did.d.ts — add `markMessagesRead`
+- IDL factory in backend.did.js — add `isRead` field and `markMessagesRead` method
+- `backend.ts` wrapper — update getMessages mapper, add markMessagesRead method
+- `ChatScreen.tsx` — call markMessagesRead on open and after each message load
+- `App.tsx` — replace raw count-based unread logic with isRead-based logic
+- `MechanicJobsTab` and `BookingsTab` — pass per-request unread count to job card Chat button badges
 
 ### Remove
-- Nothing removed
+- Old count-based unread badge polling in App.tsx (replace with isRead-based approach)
 
 ## Implementation Plan
-1. Update `main.mo`: new UserProfile with optional lat/lng/address, ServiceRequestV4, migration V3→V4, updated createServiceRequest signature
-2. Update `backend.d.ts`: sync types
-3. Update `OnboardingScreen`: role prop, differentiated label, geolocation button
-4. Update `App.tsx`: pass role to OnboardingScreen, pass lat/lng/address in profile save
-5. Update `MechanicRequestModal`: attach profile lat/lng/address to service request
-6. Update `BookingsTab` + `MechanicJobsTab`: show address field on job cards
+1. Update backend main.mo: add ChatMessageV1, new ChatMessage with isRead, migrate, update sendMessage, add markMessagesRead
+2. Update backend.did.js IDL: add isRead to ChatMessage record, add markMessagesRead to _SERVICE
+3. Update backend.did.d.ts: add isRead to ChatMessage interface, add markMessagesRead to _SERVICE
+4. Update backend.d.ts: add isRead to ChatMessage, add markMessagesRead to backendInterface
+5. Update backend.ts wrapper: add isRead to getMessages mapper, add markMessagesRead method
+6. Update useQueries.ts: add useMarkMessagesRead hook, add useUnreadCount helper
+7. Update ChatScreen.tsx: call markMessagesRead when screen opens and when new messages arrive
+8. Update App.tsx: use isRead-based unread count derived from message data
+9. Update BookingsTab and MechanicJobsTab: show per-request unread badge on Chat button

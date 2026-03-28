@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import type { Identity } from "@icp-sdk/core/agent";
 import type { Principal } from "@icp-sdk/core/principal";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { UserProfile } from "./backend";
 import {
   CustomerBottomNav,
@@ -16,6 +16,8 @@ import RoleSelectionScreen from "./components/RoleSelectionScreen";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
+  countUnread,
+  useGetMessages,
   useSaveProfile,
   useSaveUserAppRole,
   useUserAppRole,
@@ -51,12 +53,6 @@ function AppContent() {
   const queryClient = useQueryClient();
   const [chatState, setChatState] = useState<ChatState | null>(null);
 
-  // Unread chat badge tracking
-  const [unreadChat, setUnreadChat] = useState(0);
-  const lastSeenCountRef = useRef(0);
-  // Track the last known active requestId (persists when chat is closed)
-  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
-
   // Email identity from email/password auth
   const [emailIdentity, setEmailIdentityState] = useState<Identity | null>(
     getEmailIdentity,
@@ -83,6 +79,14 @@ function AppContent() {
 
   const principal = identity?.getPrincipal().toString() ?? "";
 
+  // Unread chat badge tracking
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const { data: activeMessages } = useGetMessages(activeRequestId);
+  const unreadChat =
+    activeRequestId && activeMessages
+      ? countUnread(activeMessages, principal)
+      : 0;
+
   useEffect(() => {
     if (!actor || !isAuthenticated) return;
     const seeded = localStorage.getItem(SEED_KEY);
@@ -106,56 +110,14 @@ function AppContent() {
     }
   }, [userAppRole]);
 
-  // Poll for new messages when chat is closed to drive the unread badge
-  useEffect(() => {
-    if (!actor || !activeRequestId || chatState !== null) return;
-
-    const poll = async () => {
-      try {
-        const msgs = await (actor as any).getMessages(activeRequestId);
-        const count = Array.isArray(msgs) ? msgs.length : 0;
-        if (count > lastSeenCountRef.current) {
-          setUnreadChat(count - lastSeenCountRef.current);
-        }
-      } catch {
-        // silently ignore polling errors
-      }
-    };
-
-    poll();
-    const id = setInterval(poll, 5000);
-    return () => clearInterval(id);
-  }, [actor, activeRequestId, chatState]);
+  // Unread badge is computed reactively from activeMessages via useGetMessages
 
   const handleOpenChat = (state: ChatState) => {
     setActiveRequestId(state.requestId);
-    // Snapshot current message count so we can track new ones after closing
-    // We'll reset unread when opening
-    setUnreadChat(0);
-    lastSeenCountRef.current = 0;
-    // Fetch current message count to initialise lastSeenCountRef
-    if (actor) {
-      (actor as any)
-        .getMessages(state.requestId)
-        .then((msgs: any[]) => {
-          lastSeenCountRef.current = Array.isArray(msgs) ? msgs.length : 0;
-        })
-        .catch(() => {});
-    }
     setChatState(state);
   };
 
   const handleCloseChat = () => {
-    // On close, update lastSeenCountRef from a fresh fetch
-    if (actor && activeRequestId) {
-      (actor as any)
-        .getMessages(activeRequestId)
-        .then((msgs: any[]) => {
-          lastSeenCountRef.current = Array.isArray(msgs) ? msgs.length : 0;
-          setUnreadChat(0);
-        })
-        .catch(() => {});
-    }
     setChatState(null);
   };
 

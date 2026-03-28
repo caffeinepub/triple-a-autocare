@@ -491,4 +491,28 @@ export function useSendMessage() {
   });
 }
 
+export function useMarkMessagesRead() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (requestId: string) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.markMessagesRead(requestId);
+    },
+    onSuccess: (_data, requestId) => {
+      queryClient.invalidateQueries({ queryKey: ["chatMessages", requestId] });
+    },
+  });
+}
+
+/** Count unread messages for the current user in a messages array */
+export function countUnread(
+  messages: ChatMessage[],
+  currentUserId: string,
+): number {
+  return messages.filter(
+    (m) => !m.isRead && m.senderId.toString() !== currentUserId,
+  ).length;
+}
+
 export type { ChatMessage };
