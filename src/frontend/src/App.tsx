@@ -343,6 +343,7 @@ function AppContent() {
               requestId={chatState.requestId}
               otherPartyName={chatState.otherPartyName}
               userRole={chatState.userRole}
+              currentUserId={principal}
               onBack={handleCloseChat}
             />
           </div>

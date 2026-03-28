@@ -1,12 +1,12 @@
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetMessages, useSendMessage } from "../hooks/useQueries";
 
 interface ChatScreenProps {
   requestId: string;
   otherPartyName: string;
   userRole: "customer" | "mechanic";
+  currentUserId: string;
   onBack: () => void;
 }
 
@@ -14,10 +14,9 @@ export default function ChatScreen({
   requestId,
   otherPartyName,
   userRole,
+  currentUserId,
   onBack,
 }: ChatScreenProps) {
-  const { identity } = useInternetIdentity();
-  const currentPrincipal = identity?.getPrincipal().toString() ?? "";
   const { data: messages, isLoading } = useGetMessages(requestId);
   const sendMessage = useSendMessage();
   const [input, setInput] = useState("");
@@ -115,7 +114,7 @@ export default function ChatScreen({
           </div>
         ) : (
           messages.map((msg) => {
-            const isOwnMessage = msg.senderId.toString() === currentPrincipal;
+            const isOwnMessage = msg.senderId.toString() === currentUserId;
             return (
               <div
                 key={msg.id}
