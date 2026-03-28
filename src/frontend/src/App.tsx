@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import type { Identity } from "@icp-sdk/core/agent";
 import type { Principal } from "@icp-sdk/core/principal";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -21,22 +22,51 @@ import {
   useUserProfile,
 } from "./hooks/useQueries";
 import BookingsTab from "./pages/BookingsTab";
+import ChatScreen from "./pages/ChatScreen";
 import HomeTab from "./pages/HomeTab";
 import MarketplaceTab from "./pages/MarketplaceTab";
 import MechanicDashboard from "./pages/MechanicDashboard";
 import MechanicEarningsTab from "./pages/MechanicEarningsTab";
 import MechanicJobsTab from "./pages/MechanicJobsTab";
 import ProfileTab from "./pages/ProfileTab";
+import {
+  getEmailIdentity,
+  subscribeEmailIdentity,
+} from "./utils/emailIdentityStore";
 
 const SEED_KEY = "triple-a-seeded-v1";
 
+interface ChatState {
+  requestId: string;
+  otherPartyName: string;
+  userRole: "customer" | "mechanic";
+}
+
 function AppContent() {
-  const { identity, isInitializing } = useInternetIdentity();
+  const { identity: iiIdentity, isInitializing } = useInternetIdentity();
   const { actor } = useActor();
   const [customerTab, setCustomerTab] = useState<CustomerTab>("home");
   const [mechanicTab, setMechanicTab] = useState<MechanicTab>("dashboard");
   const [seeding, setSeeding] = useState(false);
   const queryClient = useQueryClient();
+  const [chatState, setChatState] = useState<ChatState | null>(null);
+
+  // Email identity from email/password auth
+  const [emailIdentity, setEmailIdentityState] = useState<Identity | null>(
+    getEmailIdentity,
+  );
+  useEffect(() => {
+    return subscribeEmailIdentity(setEmailIdentityState);
+  }, []);
+
+  // Use email identity as fallback when II identity is anonymous
+  const identity = emailIdentity ?? iiIdentity;
+
+  // Pre-auth two-step flow
+  const [preAuthStep, setPreAuthStep] = useState<"role" | "auth">("role");
+  const [selectedRole, setSelectedRole] = useState<"customer" | "mechanic">(
+    "customer",
+  );
 
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
@@ -95,7 +125,7 @@ function AppContent() {
     }
   };
 
-  if (isInitializing) {
+  if (isInitializing && !emailIdentity) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -107,7 +137,22 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    return <LoginScreen />;
+    if (preAuthStep === "role") {
+      return (
+        <RoleSelectionScreen
+          onSelectRole={(role) => {
+            setSelectedRole(role);
+            setPreAuthStep("auth");
+          }}
+        />
+      );
+    }
+    return (
+      <LoginScreen
+        selectedRole={selectedRole}
+        onBack={() => setPreAuthStep("role")}
+      />
+    );
   }
 
   if (profileLoading || roleLoading || seeding) {
@@ -168,11 +213,14 @@ function AppContent() {
 
     return (
       <RoleSelectionScreen
-        onSelectRole={handleSaveRole}
-        isSaving={saveRoleMutation.isPending}
+        onSelectRole={async (role) => {
+          await handleSaveRole(role);
+        }}
       />
     );
   }
+
+  const handleOpenChat = (state: ChatState) => setChatState(state);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -181,7 +229,17 @@ function AppContent() {
           {userAppRole === "customer" && (
             <>
               {customerTab === "home" && <HomeTab profile={profile} />}
-              {customerTab === "bookings" && <BookingsTab />}
+              {customerTab === "bookings" && (
+                <BookingsTab
+                  onOpenChat={(requestId, otherPartyName) =>
+                    handleOpenChat({
+                      requestId,
+                      otherPartyName,
+                      userRole: "customer",
+                    })
+                  }
+                />
+              )}
               {customerTab === "marketplace" && <MarketplaceTab />}
               {customerTab === "profile" && (
                 <ProfileTab
@@ -197,7 +255,18 @@ function AppContent() {
               {mechanicTab === "dashboard" && (
                 <MechanicDashboard profile={profile} />
               )}
-              {mechanicTab === "jobs" && <MechanicJobsTab profile={profile} />}
+              {mechanicTab === "jobs" && (
+                <MechanicJobsTab
+                  profile={profile}
+                  onOpenChat={(requestId, otherPartyName) =>
+                    handleOpenChat({
+                      requestId,
+                      otherPartyName,
+                      userRole: "mechanic",
+                    })
+                  }
+                />
+              )}
               {mechanicTab === "earnings" && <MechanicEarningsTab />}
               {mechanicTab === "profile" && (
                 <ProfileTab
@@ -210,6 +279,18 @@ function AppContent() {
           )}
         </div>
       </div>
+      {chatState && (
+        <div className="fixed inset-0 z-50 bg-background">
+          <div className="w-full max-w-[430px] mx-auto h-full">
+            <ChatScreen
+              requestId={chatState.requestId}
+              otherPartyName={chatState.otherPartyName}
+              userRole={chatState.userRole}
+              onBack={() => setChatState(null)}
+            />
+          </div>
+        </div>
+      )}
       <div className="flex justify-center">
         <div className="w-full max-w-[430px]">
           {userAppRole === "customer" && (

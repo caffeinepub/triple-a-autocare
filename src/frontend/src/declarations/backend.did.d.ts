@@ -24,6 +24,14 @@ export interface Booking {
   'mechanicId' : string,
   'notes' : [] | [string],
 }
+export interface ChatMessage {
+  'id' : string,
+  'requestId' : string,
+  'senderId' : Principal,
+  'senderRole' : string,
+  'message' : string,
+  'createdAt' : Time,
+}
 export interface Mechanic {
   'id' : string,
   'name' : string,
@@ -106,6 +114,7 @@ export interface _SERVICE {
   'getMechanic' : ActorMethod<[string], Mechanic>,
   'getMechanicActiveJob' : ActorMethod<[], [] | [ServiceRequest]>,
   'getMechanicCompletedJobs' : ActorMethod<[], Array<ServiceRequest>>,
+  'getMessages' : ActorMethod<[string], Array<ChatMessage>>,
   'getPart' : ActorMethod<[string], Part>,
   'getReviews' : ActorMethod<[string], Array<Review>>,
   'getSearchingRequests' : ActorMethod<[], Array<ServiceRequest>>,
@@ -116,6 +125,7 @@ export interface _SERVICE {
   'saveCallerUserAppRole' : ActorMethod<[string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'seedData' : ActorMethod<[], undefined>,
+  'sendMessage' : ActorMethod<[string, string], undefined>,
   'submitServicePrice' : ActorMethod<[string, bigint], undefined>,
   'updateBookingStatus' : ActorMethod<
     [

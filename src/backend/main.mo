@@ -762,4 +762,75 @@ actor {
     };
     serviceRequestsV2.add(requestId, updatedRequest);
   };
+
+  // -------------------------------------------------------------------------
+  // Chat
+  // -------------------------------------------------------------------------
+
+  type ChatMessage = {
+    id : Text;
+    requestId : Text;
+    senderId : Principal;
+    senderRole : Text;
+    message : Text;
+    createdAt : Time.Time;
+  };
+
+  let chatMessages = Map.empty<Text, ChatMessage>();
+
+  public shared ({ caller }) func sendMessage(requestId : Text, message : Text) : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized");
+    };
+
+    let request = switch (serviceRequestsV2.get(requestId)) {
+      case (null) { Runtime.trap("Service request not found") };
+      case (?r) { r };
+    };
+
+    let senderRole : Text = if (request.customerId == caller) {
+      "customer"
+    } else if (request.mechanicId == ?caller) {
+      "mechanic"
+    } else {
+      Runtime.trap("Unauthorized: Not a participant in this service request")
+    };
+
+    let timestamp = Time.now();
+    let msgId = requestId # Int.abs(timestamp).toText() # caller.toText();
+    let msg : ChatMessage = {
+      id = msgId;
+      requestId;
+      senderId = caller;
+      senderRole;
+      message;
+      createdAt = timestamp;
+    };
+    chatMessages.add(msgId, msg);
+  };
+
+  public query ({ caller }) func getMessages(requestId : Text) : async [ChatMessage] {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized");
+    };
+
+    let request = switch (serviceRequestsV2.get(requestId)) {
+      case (null) { Runtime.trap("Service request not found") };
+      case (?r) { r };
+    };
+
+    if (request.customerId != caller and request.mechanicId != ?caller) {
+      Runtime.trap("Unauthorized: Not a participant in this service request");
+    };
+
+    let msgs = chatMessages.values().filter(
+      func(m) { Text.equal(m.requestId, requestId) }
+    );
+    let arr = msgs.toArray();
+    arr.sort(
+      func(a : ChatMessage, b : ChatMessage) : { #less; #equal; #greater } {
+        Int.compare(a.createdAt, b.createdAt)
+      }
+    );
+  };
 };

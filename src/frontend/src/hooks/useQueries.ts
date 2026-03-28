@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   Booking,
+  ChatMessage,
   Mechanic,
   Part,
   Review,
@@ -429,3 +430,34 @@ export {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
 };
+
+export function useGetMessages(requestId: string | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<ChatMessage[]>({
+    queryKey: ["chatMessages", requestId],
+    queryFn: async () => {
+      if (!actor || !requestId) return [];
+      return actor.getMessages(requestId);
+    },
+    enabled: !!actor && !isFetching && !!requestId,
+    refetchInterval: 3000,
+  });
+}
+
+export function useSendMessage() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { requestId: string; message: string }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.sendMessage(params.requestId, params.message);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["chatMessages", variables.requestId],
+      });
+    },
+  });
+}
+
+export type { ChatMessage };

@@ -5,33 +5,29 @@ import {
   Loader2,
   Mail,
   ShieldCheck,
-  User,
   Wrench,
-  Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { deriveIdentityFromCredentials } from "../utils/emailAuth";
+import { setEmailIdentity } from "../utils/emailIdentityStore";
 
 type View = "main" | "email";
 type EmailMode = "login" | "signup";
+
+interface Props {
+  selectedRole: "customer" | "mechanic";
+  onBack: () => void;
+}
 
 function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export default function LoginScreen() {
-  const {
-    login,
-    isLoggingIn,
-    isLoginError,
-    loginError,
-    loginWithEmailIdentity,
-  } = useInternetIdentity();
-  const [pendingRole, setPendingRole] = useState<
-    "customer" | "mechanic" | null
-  >(null);
+export default function LoginScreen({ selectedRole, onBack }: Props) {
+  const { login, isLoggingIn, isLoginError, loginError } =
+    useInternetIdentity();
   const [view, setView] = useState<View>("main");
   const [emailMode, setEmailMode] = useState<EmailMode>("login");
   const [email, setEmail] = useState("");
@@ -40,9 +36,8 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState("");
   const [isEmailLoading, setIsEmailLoading] = useState(false);
 
-  const handleSignUp = (role: "customer" | "mechanic") => {
-    setPendingRole(role);
-    sessionStorage.setItem("pending-role", role);
+  const handleGoogleLogin = () => {
+    sessionStorage.setItem("pending-role", selectedRole);
     login();
   };
 
@@ -62,10 +57,8 @@ export default function LoginScreen() {
         email,
         password,
       );
-      if (emailMode === "signup") {
-        sessionStorage.setItem("pending-role", "customer");
-      }
-      loginWithEmailIdentity(derivedIdentity);
+      sessionStorage.setItem("pending-role", selectedRole);
+      setEmailIdentity(derivedIdentity);
     } catch (err) {
       setEmailError(
         err instanceof Error ? err.message : "Authentication failed",
@@ -75,13 +68,15 @@ export default function LoginScreen() {
     }
   };
 
-  const handleBack = () => {
+  const handleEmailBack = () => {
     setView("main");
     setEmail("");
     setPassword("");
     setEmailError("");
     setShowPassword(false);
   };
+
+  const roleLabel = selectedRole === "mechanic" ? "Mechanic" : "Customer";
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -91,68 +86,50 @@ export default function LoginScreen() {
             <motion.div
               key="main"
               className="w-full flex flex-col items-center gap-8"
-              initial={{ opacity: 0, x: -24 }}
+              initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
+              exit={{ opacity: 0, x: 24 }}
               transition={{ duration: 0.25 }}
             >
-              {/* Logo */}
-              <motion.div
-                className="flex flex-col items-center gap-3"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-yellow">
-                  <Wrench className="w-10 h-10 text-primary-foreground" />
+              {/* Back + Logo */}
+              <div className="w-full flex items-center gap-3">
+                <button
+                  type="button"
+                  data-ocid="login.back.button"
+                  onClick={onBack}
+                  className="w-10 h-10 rounded-xl bg-card flex items-center justify-center hover:bg-secondary transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 text-foreground" />
+                </button>
+                <div className="flex-1" />
+                <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-yellow">
+                  <Wrench className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <div className="text-center">
-                  <h1 className="text-4xl font-bold text-foreground tracking-tight">
-                    Triple A
-                  </h1>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Affordability, Availability, Accountability
-                  </p>
-                </div>
-              </motion.div>
+              </div>
 
-              {/* Hero image */}
+              {/* Title + role badge */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              >
-                <img
-                  src="/assets/generated/hero-car-transparent.dim_600x320.png"
-                  alt="Auto service"
-                  className="w-full max-w-[320px] object-contain"
-                />
-              </motion.div>
-
-              {/* Feature grid */}
-              <motion.div
-                className="w-full grid grid-cols-3 gap-3"
-                initial={{ opacity: 0, y: 20 }}
+                className="w-full flex flex-col items-center gap-3 text-center"
+                initial={{ opacity: 0, y: -16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
+                transition={{ duration: 0.4 }}
               >
-                {[
-                  { icon: Wrench, label: "Expert Mechanics" },
-                  { icon: Zap, label: "Fast Response" },
-                  { icon: ShieldCheck, label: "Verified Pros" },
-                ].map(({ icon: Icon, label }) => (
-                  <div
-                    key={label}
-                    className="flex flex-col items-center gap-2 bg-card rounded-2xl p-3"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-primary" />
-                    </div>
-                    <span className="text-xs text-muted-foreground text-center leading-tight">
-                      {label}
-                    </span>
-                  </div>
-                ))}
+                <h1 className="text-3xl font-bold text-foreground tracking-tight">
+                  Welcome to Triple A
+                </h1>
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/15 border border-primary/30">
+                  {selectedRole === "mechanic" ? (
+                    <Wrench className="w-4 h-4 text-primary" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4 text-primary" />
+                  )}
+                  <span className="text-sm font-semibold text-primary">
+                    Joining as {roleLabel}
+                  </span>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  Choose how you want to sign in
+                </p>
               </motion.div>
 
               {/* Auth buttons */}
@@ -160,44 +137,22 @@ export default function LoginScreen() {
                 className="w-full flex flex-col gap-3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
               >
-                <p className="text-center text-sm text-muted-foreground font-medium">
-                  Sign in with Internet Identity
-                </p>
-
+                {/* Continue with Google (Internet Identity) */}
                 <button
                   type="button"
-                  data-ocid="login.customer.primary_button"
-                  onClick={() => handleSignUp("customer")}
+                  data-ocid="login.google.primary_button"
+                  onClick={handleGoogleLogin}
                   disabled={isLoggingIn}
                   className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70"
                 >
-                  {isLoggingIn && pendingRole === "customer" ? (
+                  {isLoggingIn ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <User className="w-5 h-5" />
+                    <ShieldCheck className="w-5 h-5" />
                   )}
-                  {isLoggingIn && pendingRole === "customer"
-                    ? "Connecting..."
-                    : "Sign up as Customer"}
-                </button>
-
-                <button
-                  type="button"
-                  data-ocid="login.mechanic.secondary_button"
-                  onClick={() => handleSignUp("mechanic")}
-                  disabled={isLoggingIn}
-                  className="w-full h-14 rounded-2xl border-2 border-primary text-primary font-bold text-lg flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-70 hover:bg-primary/10"
-                >
-                  {isLoggingIn && pendingRole === "mechanic" ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Wrench className="w-5 h-5" />
-                  )}
-                  {isLoggingIn && pendingRole === "mechanic"
-                    ? "Connecting..."
-                    : "Sign up as Mechanic"}
+                  {isLoggingIn ? "Connecting..." : "Continue with Google"}
                 </button>
 
                 {isLoginError && (
@@ -228,7 +183,7 @@ export default function LoginScreen() {
                 </button>
 
                 <p className="text-muted-foreground text-xs text-center">
-                  Secure login via Internet Identity — no password needed
+                  Secure login — no data shared without your consent
                 </p>
               </motion.div>
             </motion.div>
@@ -246,7 +201,7 @@ export default function LoginScreen() {
                 <button
                   type="button"
                   data-ocid="login.email.close_button"
-                  onClick={handleBack}
+                  onClick={handleEmailBack}
                   className="w-10 h-10 rounded-xl bg-card flex items-center justify-center hover:bg-secondary transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5 text-foreground" />
@@ -257,8 +212,8 @@ export default function LoginScreen() {
                   </h2>
                   <p className="text-muted-foreground text-sm">
                     {emailMode === "login"
-                      ? "Sign in to your Triple A account"
-                      : "Join Triple A AutoCare today"}
+                      ? `Sign in as ${roleLabel}`
+                      : `Sign up as ${roleLabel}`}
                   </p>
                 </div>
               </div>
@@ -391,13 +346,6 @@ export default function LoginScreen() {
                       ? "Log in"
                       : "Create Account"}
                 </button>
-
-                {emailMode === "signup" && (
-                  <p className="text-muted-foreground text-xs text-center">
-                    You'll be signed up as a customer. Mechanic accounts use
-                    Internet Identity.
-                  </p>
-                )}
               </div>
             </motion.div>
           )}

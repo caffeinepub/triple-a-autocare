@@ -84,6 +84,15 @@ export const Review = IDL.Record({
   'timestamp' : Time,
   'rating' : IDL.Nat,
 });
+export const ChatMessage = IDL.Record({
+  'id' : IDL.Text,
+  'requestId' : IDL.Text,
+  'senderId' : IDL.Principal,
+  'senderRole' : IDL.Text,
+  'message' : IDL.Text,
+  'createdAt' : Time,
+});
+
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
@@ -281,6 +290,7 @@ export const idlFactory = ({ IDL }) => {
     'getMechanic' : IDL.Func([IDL.Text], [Mechanic], ['query']),
     'getMechanicActiveJob' : IDL.Func([], [IDL.Opt(ServiceRequest)], ['query']),
     'getMechanicCompletedJobs' : IDL.Func([], [IDL.Vec(ServiceRequest)], ['query']),
+    'getMessages' : IDL.Func([IDL.Text], [IDL.Vec(ChatMessage)], ['query']),
     'getPart' : IDL.Func([IDL.Text], [Part], ['query']),
     'getReviews' : IDL.Func([IDL.Text], [IDL.Vec(Review)], ['query']),
     'getSearchingRequests' : IDL.Func([], [IDL.Vec(ServiceRequest)], ['query']),
@@ -295,6 +305,7 @@ export const idlFactory = ({ IDL }) => {
     'saveCallerUserAppRole' : IDL.Func([IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'seedData' : IDL.Func([], [], []),
+    'sendMessage' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'submitServicePrice' : IDL.Func([IDL.Text, IDL.Nat], [], []),
     'updateBookingStatus' : IDL.Func(
         [

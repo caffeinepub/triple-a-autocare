@@ -102,6 +102,14 @@ export interface ServiceRequest {
     location: string;
     price?: bigint;
 }
+export interface ChatMessage {
+    id: string;
+    requestId: string;
+    senderId: Principal;
+    senderRole: string;
+    message: string;
+    createdAt: Time;
+}
 export interface Part {
     id: string;
     inStock: boolean;
@@ -207,6 +215,8 @@ export interface backendInterface {
     updateBookingStatus(bookingId: string, newStatus: Variant_cancelled_pending_completed_confirmed): Promise<void>;
     updateServiceRequest(requestId: string, price: bigint, status: "price_sent"): Promise<void>;
     updateServiceRequestStatus(requestId: string, newStatus: Variant_on_the_way_arrived_completed_accepted): Promise<void>;
+    getMessages(requestId: string): Promise<Array<ChatMessage>>;
+    sendMessage(requestId: string, message: string): Promise<void>;
 }
 import type { Booking as _Booking, ServiceRequest as _ServiceRequest, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -670,6 +680,48 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.updateServiceRequestStatus(arg0, to_candid_variant_n19(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async getMessages(arg0: string): Promise<Array<ChatMessage>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMessages(arg0);
+                return result.map((m: any) => ({
+                    id: m.id,
+                    requestId: m.requestId,
+                    senderId: m.senderId,
+                    senderRole: m.senderRole,
+                    message: m.message,
+                    createdAt: m.createdAt,
+                }));
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMessages(arg0);
+            return result.map((m: any) => ({
+                id: m.id,
+                requestId: m.requestId,
+                senderId: m.senderId,
+                senderRole: m.senderRole,
+                message: m.message,
+                createdAt: m.createdAt,
+            }));
+        }
+    }
+    async sendMessage(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.sendMessage(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.sendMessage(arg0, arg1);
             return result;
         }
     }

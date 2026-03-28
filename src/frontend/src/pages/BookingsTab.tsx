@@ -4,6 +4,7 @@ import {
   CheckCircle,
   Loader2,
   MapPin,
+  MessageCircle,
   PlusCircle,
   Wrench,
   XCircle,
@@ -38,6 +39,8 @@ const ACTIVE_STATUSES = new Set([
   "approved",
 ]);
 
+const CHAT_STATUSES = new Set(["accepted", "on_the_way", "arrived"]);
+
 const REQUEST_STATUS_LABELS: Record<string, string> = {
   searching: "Searching for Mechanic",
   accepted: "Mechanic Accepted",
@@ -63,7 +66,13 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-red-500/15 text-red-400",
 };
 
-function ActiveRequestCard({ request }: { request: ExtendedServiceRequest }) {
+function ActiveRequestCard({
+  request,
+  onOpenChat,
+}: {
+  request: ExtendedServiceRequest;
+  onOpenChat: (id: string, name: string) => void;
+}) {
   const respondToPrice = useCustomerRespondToPrice();
   const prevStatusRef = useRef<string>(request.status);
 
@@ -155,6 +164,20 @@ function ActiveRequestCard({ request }: { request: ExtendedServiceRequest }) {
             {request.mechanicName}
           </span>
         </div>
+      )}
+
+      {CHAT_STATUSES.has(request.status) && (
+        <button
+          type="button"
+          data-ocid="bookings.chat.button"
+          onClick={() =>
+            onOpenChat(request.id, request.mechanicName ?? "Mechanic")
+          }
+          className="w-full py-3 rounded-2xl border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+        >
+          <MessageCircle className="w-4 h-4" />
+          Chat with Mechanic
+        </button>
       )}
 
       {request.status === "price_sent" && request.price != null && (
@@ -327,7 +350,9 @@ function BookingCard({
   );
 }
 
-export default function BookingsTab() {
+export default function BookingsTab({
+  onOpenChat,
+}: { onOpenChat?: (requestId: string, name: string) => void }) {
   const { data: bookings, isLoading: bookingsLoading } = useUserBookings();
   const { data: mechanics } = useMechanics();
   const { data: activeRequest, isLoading: requestLoading } =
@@ -389,7 +414,10 @@ export default function BookingsTab() {
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : hasActiveRequest ? (
-            <ActiveRequestCard request={activeRequest} />
+            <ActiveRequestCard
+              request={activeRequest}
+              onOpenChat={onOpenChat ?? ((_id, _name) => {})}
+            />
           ) : (
             <div
               data-ocid="bookings.active.empty_state"

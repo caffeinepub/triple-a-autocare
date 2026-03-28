@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Loader2, MapPin } from "lucide-react";
+import { Briefcase, Loader2, MapPin, MessageCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -61,7 +61,15 @@ function statusBadgeClass(status: string) {
   }
 }
 
-function ActiveJobCard({ job }: { job: ExtendedServiceRequest }) {
+const CHAT_STATUSES = new Set(["accepted", "on_the_way", "arrived"]);
+
+function ActiveJobCard({
+  job,
+  onOpenChat,
+}: {
+  job: ExtendedServiceRequest;
+  onOpenChat: (id: string, name: string) => void;
+}) {
   const updateStatus = useUpdateServiceRequestStatus();
   const updateServiceRequest = useUpdateServiceRequest();
   const completeJob = useCompleteJob();
@@ -188,6 +196,18 @@ function ActiveJobCard({ job }: { job: ExtendedServiceRequest }) {
         )}
       </div>
 
+      {CHAT_STATUSES.has(job.status) && (
+        <button
+          type="button"
+          data-ocid="jobs.chat.button"
+          onClick={() => onOpenChat(job.id, job.customerName ?? "Customer")}
+          className="w-full py-3 rounded-2xl border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+        >
+          <MessageCircle className="w-4 h-4" />
+          Chat with Customer
+        </button>
+      )}
+
       {job.status === "accepted" && (
         <button
           type="button"
@@ -294,7 +314,11 @@ function ActiveJobCard({ job }: { job: ExtendedServiceRequest }) {
 
 export default function MechanicJobsTab({
   profile: _profile,
-}: { profile?: UserProfile }) {
+  onOpenChat,
+}: {
+  profile?: UserProfile;
+  onOpenChat?: (requestId: string, name: string) => void;
+}) {
   const { data: jobs, isLoading } = useGetServiceRequests();
   const { identity } = useInternetIdentity();
   const currentPrincipal = identity?.getPrincipal().toString() ?? "";
@@ -368,7 +392,11 @@ export default function MechanicJobsTab({
         ) : activeJobs.length > 0 ? (
           <div className="flex flex-col gap-4">
             {activeJobs.map((job) => (
-              <ActiveJobCard key={job.id} job={job} />
+              <ActiveJobCard
+                key={job.id}
+                job={job}
+                onOpenChat={onOpenChat ?? ((_id, _name) => {})}
+              />
             ))}
           </div>
         ) : (

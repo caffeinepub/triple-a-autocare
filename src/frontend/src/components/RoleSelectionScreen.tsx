@@ -1,117 +1,113 @@
-import { Car, Loader2, Wrench } from "lucide-react";
+import { Car, ShieldCheck, Wrench, Zap } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
 
 interface Props {
-  onSelectRole: (role: "customer" | "mechanic") => Promise<void>;
-  isSaving: boolean;
+  onSelectRole: (role: "customer" | "mechanic") => void;
 }
 
-export default function RoleSelectionScreen({ onSelectRole, isSaving }: Props) {
-  const [selected, setSelected] = useState<"customer" | "mechanic" | null>(
-    null,
-  );
-
-  const handleSelect = async (role: "customer" | "mechanic") => {
-    setSelected(role);
-    await onSelectRole(role);
-  };
-
-  const roles = [
-    {
-      key: "customer" as const,
-      icon: Car,
-      title: "Customer",
-      description: "Request mechanics, book services, and buy car parts",
-      cta: "Continue as Customer",
-      ocid: "role.customer.button",
-    },
-    {
-      key: "mechanic" as const,
-      icon: Wrench,
-      title: "Mechanic",
-      description: "Receive job requests, earn money, and manage services",
-      cta: "Continue as Mechanic",
-      ocid: "role.mechanic.button",
-    },
-  ];
-
+export default function RoleSelectionScreen({ onSelectRole }: Props) {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5 py-12">
-      <motion.div
-        className="w-full max-w-[430px] flex flex-col gap-8"
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-      >
-        {/* Header */}
-        <div className="text-center">
-          <motion.div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4 shadow-yellow"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.15, duration: 0.4 }}
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      <div className="w-full max-w-[430px] flex flex-col items-center gap-8">
+        {/* Logo */}
+        <motion.div
+          className="flex flex-col items-center gap-3"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-yellow">
+            <Wrench className="w-10 h-10 text-primary-foreground" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-foreground tracking-tight">
+              Triple A
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Affordability, Availability, Accountability
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Hero image */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <img
+            src="/assets/generated/hero-car-transparent.dim_600x320.png"
+            alt="Auto service"
+            className="w-full max-w-[320px] object-contain"
+          />
+        </motion.div>
+
+        {/* Feature grid */}
+        <motion.div
+          className="w-full grid grid-cols-3 gap-3"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          {[
+            { icon: Wrench, label: "Expert Mechanics" },
+            { icon: Zap, label: "Fast Response" },
+            { icon: ShieldCheck, label: "Verified Pros" },
+          ].map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className="flex flex-col items-center gap-2 bg-card rounded-2xl p-3"
+            >
+              <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                <Icon className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-xs text-muted-foreground text-center leading-tight">
+                {label}
+              </span>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* CTA Buttons */}
+        <motion.div
+          className="w-full flex flex-col gap-3"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <button
+            type="button"
+            data-ocid="role.customer.primary_button"
+            onClick={() => onSelectRole("customer")}
+            className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform"
           >
-            <Car className="w-8 h-8 text-primary-foreground" />
-          </motion.div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Choose Your Role
-          </h1>
-          <p className="text-muted-foreground mt-2 text-base">
-            Select how you want to use Triple A AutoCare
-          </p>
-        </div>
+            <Car className="w-5 h-5" />
+            Get Started
+          </button>
 
-        {/* Role Cards */}
-        <div className="flex flex-col gap-4">
-          {roles.map((role, i) => {
-            const Icon = role.icon;
-            const isActive = selected === role.key;
-            const isLoading = isSaving && isActive;
+          <button
+            type="button"
+            data-ocid="role.mechanic.secondary_button"
+            onClick={() => onSelectRole("mechanic")}
+            className="w-full h-14 rounded-2xl border-2 border-primary text-primary font-bold text-lg flex items-center justify-center gap-2 active:scale-[0.98] transition-transform hover:bg-primary/10"
+          >
+            <Wrench className="w-5 h-5" />
+            Join as Mechanic
+          </button>
+        </motion.div>
 
-            return (
-              <motion.div
-                key={role.key}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 + i * 0.12, duration: 0.4 }}
-                className={`bg-card border rounded-2xl p-6 flex flex-col gap-5 transition-all duration-200 ${
-                  isActive
-                    ? "border-primary shadow-yellow"
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Icon className="w-7 h-7 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-foreground">
-                      {role.title}
-                    </h2>
-                    <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
-                      {role.description}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  data-ocid={role.ocid}
-                  onClick={() => handleSelect(role.key)}
-                  disabled={isSaving}
-                  className="w-full h-14 rounded-xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-all disabled:opacity-70"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : null}
-                  {isLoading ? "Saving..." : role.cta}
-                </button>
-              </motion.div>
-            );
-          })}
-        </div>
-      </motion.div>
+        <p className="text-muted-foreground text-xs text-center pb-4">
+          &copy; {new Date().getFullYear()}. Built with love using{" "}
+          <a
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            caffeine.ai
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
