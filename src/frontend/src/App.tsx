@@ -347,7 +347,7 @@ function AppContent() {
         </div>
       </div>
       {chatState && (
-        <div className="fixed inset-0 z-50 bg-background">
+        <div className="fixed inset-0 z-[60] bg-background">
           <div className="w-full max-w-[430px] mx-auto h-full">
             <ChatScreen
               requestId={chatState.requestId}
