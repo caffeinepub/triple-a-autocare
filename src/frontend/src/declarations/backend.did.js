@@ -53,6 +53,13 @@ export const UserProfile = IDL.Record({
   'name' : IDL.Text,
   'phone' : IDL.Text,
   'location' : IDL.Text,
+  'latitude' : IDL.Opt(IDL.Float64),
+  'longitude' : IDL.Opt(IDL.Float64),
+  'address' : IDL.Opt(IDL.Text),
+  'profileImage' : IDL.Opt(IDL.Text),
+  'role' : IDL.Opt(IDL.Text),
+  'yearsOfExperience' : IDL.Opt(IDL.Nat),
+  'specialties' : IDL.Opt(IDL.Text),
 });
 export const ServiceRequest = IDL.Record({
   'id' : IDL.Text,
@@ -133,6 +140,8 @@ export const idlService = IDL.Service({
   'getMechanic' : IDL.Func([IDL.Text], [Mechanic], ['query']),
   'getMechanicActiveJob' : IDL.Func([], [IDL.Opt(ServiceRequest)], ['query']),
   'getMechanicCompletedJobs' : IDL.Func([], [IDL.Vec(ServiceRequest)], ['query']),
+  'getMechanicPublicProfile' : IDL.Func([IDL.Principal], [IDL.Opt(UserProfile)], ['query']),
+  'getMessages' : IDL.Func([IDL.Text], [IDL.Vec(ChatMessage)], ['query']),
   'getPart' : IDL.Func([IDL.Text], [Part], ['query']),
   'getReviews' : IDL.Func([IDL.Text], [IDL.Vec(Review)], ['query']),
   'getSearchingRequests' : IDL.Func([], [IDL.Vec(ServiceRequest)], ['query']),
@@ -147,6 +156,8 @@ export const idlService = IDL.Service({
   'saveCallerUserAppRole' : IDL.Func([IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'seedData' : IDL.Func([], [], []),
+  'markMessagesRead' : IDL.Func([IDL.Text], [], []),
+  'sendMessage' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'submitServicePrice' : IDL.Func([IDL.Text, IDL.Nat], [], []),
   'updateBookingStatus' : IDL.Func(
       [
@@ -181,6 +192,11 @@ export const idlService = IDL.Service({
         }),
       ],
       [],
+      [],
+    ),
+  'updateUserProfile' : IDL.Func(
+      [IDL.Opt(IDL.Text), IDL.Opt(IDL.Text), IDL.Opt(IDL.Nat), IDL.Opt(IDL.Text)],
+      [UserProfile],
       [],
     ),
 });
@@ -233,6 +249,13 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'phone' : IDL.Text,
     'location' : IDL.Text,
+    'latitude' : IDL.Opt(IDL.Float64),
+    'longitude' : IDL.Opt(IDL.Float64),
+    'address' : IDL.Opt(IDL.Text),
+    'profileImage' : IDL.Opt(IDL.Text),
+    'role' : IDL.Opt(IDL.Text),
+    'yearsOfExperience' : IDL.Opt(IDL.Nat),
+    'specialties' : IDL.Opt(IDL.Text),
   });
   const ServiceRequest = IDL.Record({
     'id' : IDL.Text,
@@ -300,6 +323,7 @@ export const idlFactory = ({ IDL }) => {
     'getMechanic' : IDL.Func([IDL.Text], [Mechanic], ['query']),
     'getMechanicActiveJob' : IDL.Func([], [IDL.Opt(ServiceRequest)], ['query']),
     'getMechanicCompletedJobs' : IDL.Func([], [IDL.Vec(ServiceRequest)], ['query']),
+    'getMechanicPublicProfile' : IDL.Func([IDL.Principal], [IDL.Opt(UserProfile)], ['query']),
     'getMessages' : IDL.Func([IDL.Text], [IDL.Vec(ChatMessage)], ['query']),
     'getPart' : IDL.Func([IDL.Text], [Part], ['query']),
     'getReviews' : IDL.Func([IDL.Text], [IDL.Vec(Review)], ['query']),
@@ -316,7 +340,7 @@ export const idlFactory = ({ IDL }) => {
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'seedData' : IDL.Func([], [], []),
     'markMessagesRead' : IDL.Func([IDL.Text], [], []),
-  'sendMessage' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'sendMessage' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'submitServicePrice' : IDL.Func([IDL.Text, IDL.Nat], [], []),
     'updateBookingStatus' : IDL.Func(
         [
@@ -351,6 +375,11 @@ export const idlFactory = ({ IDL }) => {
           }),
         ],
         [],
+        [],
+      ),
+    'updateUserProfile' : IDL.Func(
+        [IDL.Opt(IDL.Text), IDL.Opt(IDL.Text), IDL.Opt(IDL.Nat), IDL.Opt(IDL.Text)],
+        [UserProfile],
         [],
       ),
   });

@@ -93,6 +93,10 @@ export interface UserProfile {
   'latitude' : [] | [number],
   'longitude' : [] | [number],
   'address' : [] | [string],
+  'profileImage' : [] | [string],
+  'role' : [] | [string],
+  'yearsOfExperience' : [] | [bigint],
+  'specialties' : [] | [string],
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
@@ -124,6 +128,7 @@ export interface _SERVICE {
   'getMechanic' : ActorMethod<[string], Mechanic>,
   'getMechanicActiveJob' : ActorMethod<[], [] | [ServiceRequest]>,
   'getMechanicCompletedJobs' : ActorMethod<[], Array<ServiceRequest>>,
+  'getMechanicPublicProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getMessages' : ActorMethod<[string], Array<ChatMessage>>,
   'getPart' : ActorMethod<[string], Part>,
   'getReviews' : ActorMethod<[string], Array<Review>>,
@@ -165,6 +170,10 @@ export interface _SERVICE {
         { 'accepted' : null },
     ],
     undefined
+  >,
+  'updateUserProfile' : ActorMethod<
+    [[] | [string], [] | [string], [] | [bigint], [] | [string]],
+    UserProfile
   >,
 }
 export declare const idlService: IDL.ServiceClass;

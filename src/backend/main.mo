@@ -67,7 +67,18 @@ actor {
     phone : Text;
   };
 
-  // V2 — current UserProfile with location coordinates
+  // V2 — UserProfile with location coordinates (previous current)
+  type UserProfileV2 = {
+    userId : Principal;
+    name : Text;
+    location : Text;
+    phone : Text;
+    latitude : ?Float;
+    longitude : ?Float;
+    address : ?Text;
+  };
+
+  // V3 — current UserProfile with profile image, role, mechanic fields
   public type UserProfile = {
     userId : Principal;
     name : Text;
@@ -76,6 +87,10 @@ actor {
     latitude : ?Float;
     longitude : ?Float;
     address : ?Text;
+    profileImage : ?Text;
+    role : ?Text;
+    yearsOfExperience : ?Nat;
+    specialties : ?Text;
   };
 
   // V1 — original deployed type
@@ -187,8 +202,10 @@ actor {
   // V1 stable storage for UserProfile — kept for migration only
   let userProfiles = Map.empty<Principal, UserProfileV1>();
   let userRoles = Map.empty<Principal, Text>();
-  // V2 stable storage — current UserProfile with location coords
-  let userProfilesV2 = Map.empty<Principal, UserProfile>();
+  // V2 stable storage — kept for migration
+  let userProfilesV2 = Map.empty<Principal, UserProfileV2>();
+  // V3 stable storage — current version with profileImage, role, mechanic fields
+  let userProfilesV3 = Map.empty<Principal, UserProfile>();
 
   // V1 stable storage — kept for migration only
   let serviceRequests = Map.empty<Text, ServiceRequestV1>();
@@ -260,9 +277,9 @@ actor {
       };
     };
 
-    // Migrate UserProfile V1 → V2
+    // Migrate UserProfile V1 → V3
     for (p in userProfiles.values()) {
-      if (userProfilesV2.get(p.userId) == null) {
+      if (userProfilesV3.get(p.userId) == null) {
         let migrated : UserProfile = {
           userId = p.userId;
           name = p.name;
@@ -271,8 +288,32 @@ actor {
           latitude = null;
           longitude = null;
           address = null;
+          profileImage = null;
+          role = null;
+          yearsOfExperience = null;
+          specialties = null;
         };
-        userProfilesV2.add(p.userId, migrated);
+        userProfilesV3.add(p.userId, migrated);
+      };
+    };
+
+    // Migrate UserProfile V2 → V3
+    for (p in userProfilesV2.values()) {
+      if (userProfilesV3.get(p.userId) == null) {
+        let migrated : UserProfile = {
+          userId = p.userId;
+          name = p.name;
+          location = p.location;
+          phone = p.phone;
+          latitude = p.latitude;
+          longitude = p.longitude;
+          address = p.address;
+          profileImage = null;
+          role = null;
+          yearsOfExperience = null;
+          specialties = null;
+        };
+        userProfilesV3.add(p.userId, migrated);
       };
     };
 
@@ -314,6 +355,35 @@ actor {
           createdAt = msg.createdAt;
         };
         chatMessagesV2.add(msg.id, migrated);
+      };
+    };
+  };
+
+  // Helper: get V3 profile for a user, with lazy migration from V2
+  func getProfileV3(userId : Principal) : ?UserProfile {
+    switch (userProfilesV3.get(userId)) {
+      case (?p) { ?p };
+      case (null) {
+        // lazy migrate from V2
+        switch (userProfilesV2.get(userId)) {
+          case (?p) {
+            let migrated : UserProfile = {
+              userId = p.userId;
+              name = p.name;
+              location = p.location;
+              phone = p.phone;
+              latitude = p.latitude;
+              longitude = p.longitude;
+              address = p.address;
+              profileImage = null;
+              role = null;
+              yearsOfExperience = null;
+              specialties = null;
+            };
+            ?migrated;
+          };
+          case (null) { null };
+        };
       };
     };
   };
@@ -456,21 +526,85 @@ actor {
       profile with
       userId = caller;
     };
-    userProfilesV2.add(caller, updatedProfile);
+    userProfilesV3.add(caller, updatedProfile);
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can get profiles");
     };
-    userProfilesV2.get(caller);
+    getProfileV3(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
-    userProfilesV2.get(user);
+    getProfileV3(user);
+  };
+
+  public shared ({ caller }) func updateUserProfile(name : ?Text, profileImage : ?Text, yearsOfExperience : ?Nat, specialties : ?Text) : async UserProfile {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: Only users can update profiles");
+    };
+
+    let existing : UserProfile = switch (getProfileV3(caller)) {
+      case (?p) { p };
+      case (null) {
+        {
+          userId = caller;
+          name = "";
+          location = "";
+          phone = "";
+          latitude = null;
+          longitude = null;
+          address = null;
+          profileImage = null;
+          role = null;
+          yearsOfExperience = null;
+          specialties = null;
+        }
+      };
+    };
+
+    // Get the stored app role for this user
+    let storedRole : ?Text = switch (userRoles.get(caller)) {
+      case (?r) { if (Text.equal(r, "")) { existing.role } else { ?r } };
+      case (null) { existing.role };
+    };
+
+    let isMechanic = switch (storedRole) {
+      case (?r) { Text.equal(r, "mechanic") };
+      case (null) { false };
+    };
+
+    let updated : UserProfile = {
+      userId = caller;
+      name = switch (name) { case (?n) { n }; case (null) { existing.name } };
+      location = existing.location;
+      phone = existing.phone;
+      latitude = existing.latitude;
+      longitude = existing.longitude;
+      address = existing.address;
+      profileImage = switch (profileImage) { case (?img) { ?img }; case (null) { existing.profileImage } };
+      role = storedRole;
+      yearsOfExperience = if (isMechanic) {
+        switch (yearsOfExperience) { case (?y) { ?y }; case (null) { existing.yearsOfExperience } }
+      } else { null };
+      specialties = if (isMechanic) {
+        switch (specialties) { case (?s) { ?s }; case (null) { existing.specialties } }
+      } else { null };
+    };
+
+    userProfilesV3.add(caller, updated);
+    updated;
+  };
+
+  public query ({ caller }) func getMechanicPublicProfile(mechanicId : Principal) : async ?UserProfile {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized");
+    };
+    getProfileV3(mechanicId);
   };
 
   public shared ({ caller }) func saveCallerUserAppRole(role : Text) : async () {

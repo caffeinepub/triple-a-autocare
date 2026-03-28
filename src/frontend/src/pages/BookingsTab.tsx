@@ -18,6 +18,7 @@ import {
   MapPin,
   MessageCircle,
   PlusCircle,
+  Star,
   Wrench,
   X,
   XCircle,
@@ -36,6 +37,7 @@ import {
   useCustomerActiveRequest,
   useCustomerCompletedRequests,
   useCustomerRespondToPrice,
+  useGetMechanicProfile,
   useGetMessages,
   useMechanics,
   useUserBookings,
@@ -94,6 +96,68 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-green-500/15 text-green-400",
   cancelled: "bg-red-500/15 text-red-400",
 };
+
+const MECHANIC_VISIBLE_STATUSES = new Set([
+  "accepted",
+  "on_the_way",
+  "arrived",
+  "price_sent",
+  "approved",
+]);
+
+function MechanicInfoRow({
+  mechanicId,
+  mechanicName,
+}: { mechanicId: string; mechanicName: string }) {
+  const { data: mechanicProfile } = useGetMechanicProfile(mechanicId);
+
+  const initials = mechanicName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+  const yoe =
+    mechanicProfile?.yearsOfExperience != null
+      ? Number(mechanicProfile.yearsOfExperience)
+      : null;
+  const specs = mechanicProfile?.specialties;
+
+  return (
+    <div className="flex items-center gap-3 bg-secondary/50 border border-border rounded-xl p-3">
+      {mechanicProfile?.profileImage ? (
+        <img
+          src={mechanicProfile.profileImage}
+          alt={mechanicName}
+          className="w-10 h-10 rounded-full object-cover shrink-0 border border-primary/30"
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+          <span className="text-primary font-bold text-sm">{initials}</span>
+        </div>
+      )}
+      <div className="flex flex-col min-w-0">
+        <p className="font-semibold text-foreground text-sm truncate">
+          {mechanicName}
+        </p>
+        {yoe != null && (
+          <div className="flex items-center gap-1">
+            <Star className="w-3 h-3 text-primary fill-primary" />
+            <span className="text-muted-foreground text-xs">
+              {yoe}+ yrs experience
+            </span>
+          </div>
+        )}
+        {specs && (
+          <span className="text-muted-foreground text-xs truncate">
+            Specializes in {specs}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ActiveRequestCard({
   request,
@@ -159,6 +223,8 @@ function ActiveRequestCard({
     }
   };
 
+  const mechanicIdStr = request.mechanicId?.toString();
+
   return (
     <>
       <motion.div
@@ -209,14 +275,15 @@ function ActiveRequestCard({
           {request.issueDescription}
         </p>
 
-        {request.mechanicName && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Mechanic:</span>
-            <span className="text-foreground font-medium">
-              {request.mechanicName}
-            </span>
-          </div>
-        )}
+        {/* Mechanic info card */}
+        {mechanicIdStr &&
+          request.mechanicName &&
+          MECHANIC_VISIBLE_STATUSES.has(request.status) && (
+            <MechanicInfoRow
+              mechanicId={mechanicIdStr}
+              mechanicName={request.mechanicName}
+            />
+          )}
 
         {/* Chat button */}
         {CHAT_STATUSES.has(request.status) && (

@@ -201,6 +201,48 @@ export function useUpdateBookingStatus() {
 }
 
 // ---------------------------------------------------------------------------
+// Profile upgrade hooks
+// ---------------------------------------------------------------------------
+
+export function useUpdateUserProfile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      name?: string | null;
+      profileImage?: string | null;
+      yearsOfExperience?: bigint | null;
+      specialties?: string | null;
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.updateUserProfile(
+        params.name ?? null,
+        params.profileImage ?? null,
+        params.yearsOfExperience ?? null,
+        params.specialties ?? null,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+export function useGetMechanicProfile(mechanicId: string | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<UserProfile | null>({
+    queryKey: ["mechanicProfile", mechanicId],
+    queryFn: async () => {
+      if (!actor || !mechanicId) return null;
+      const { Principal } = await import("@icp-sdk/core/principal");
+      return actor.getMechanicPublicProfile(Principal.fromText(mechanicId));
+    },
+    enabled: !!actor && !isFetching && !!mechanicId,
+    staleTime: 30000,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Service Request hooks
 // ---------------------------------------------------------------------------
 

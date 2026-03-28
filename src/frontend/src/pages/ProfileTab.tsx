@@ -1,42 +1,84 @@
 import type { Principal } from "@icp-sdk/core/principal";
-import {
-  Check,
-  Edit3,
-  Loader2,
-  LogOut,
-  MapPin,
-  Phone,
-  User,
-} from "lucide-react";
+import { Camera, Loader2, LogOut, Wrench } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { UserProfile } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useUserAppRole } from "../hooks/useQueries";
+import { useUpdateUserProfile, useUserAppRole } from "../hooks/useQueries";
 
 interface Props {
   profile: UserProfile;
-  onSave: (data: {
+  onSave?: (data: {
     name: string;
     phone: string;
     location: string;
   }) => Promise<void>;
-  isSaving: boolean;
+  isSaving?: boolean;
 }
 
-export default function ProfileTab({ profile, onSave, isSaving }: Props) {
+function Avatar({
+  src,
+  initials,
+  size = 80,
+}: { src?: string; initials: string; size?: number }) {
+  const dim = `${size}px`;
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt="Profile"
+        style={{ width: dim, height: dim }}
+        className="rounded-full object-cover border-2 border-primary shadow-lg"
+      />
+    );
+  }
+  return (
+    <div
+      style={{ width: dim, height: dim }}
+      className="rounded-full bg-primary flex items-center justify-center shadow-yellow shrink-0"
+    >
+      <span
+        className="text-primary-foreground font-bold"
+        style={{ fontSize: size * 0.35 }}
+      >
+        {initials}
+      </span>
+    </div>
+  );
+}
+
+export default function ProfileTab({ profile }: Props) {
   const { clear, identity } = useInternetIdentity();
   const { data: userAppRole } = useUserAppRole();
-  const [editing, setEditing] = useState(false);
+  const updateProfile = useUpdateUserProfile();
+
   const [name, setName] = useState(profile.name);
-  const [phone, setPhone] = useState(profile.phone);
-  const [location, setLocation] = useState(profile.location);
+  const [profileImage, setProfileImage] = useState<string | undefined>(
+    profile.profileImage,
+  );
+  const [yearsOfExperience, setYearsOfExperience] = useState<string>(
+    profile.yearsOfExperience != null
+      ? String(Number(profile.yearsOfExperience))
+      : "",
+  );
+  const [specialties, setSpecialties] = useState<string>(
+    profile.specialties ?? "",
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(profile.name);
-    setPhone(profile.phone);
-    setLocation(profile.location);
+    setProfileImage(profile.profileImage);
+    setYearsOfExperience(
+      profile.yearsOfExperience != null
+        ? String(Number(profile.yearsOfExperience))
+        : "",
+    );
+    setSpecialties(profile.specialties ?? "");
   }, [profile]);
+
+  const isMechanic = userAppRole === "mechanic";
 
   const initials = name
     .split(" ")
@@ -45,83 +87,89 @@ export default function ProfileTab({ profile, onSave, isSaving }: Props) {
     .join("")
     .toUpperCase();
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSave({ name, phone, location });
-    setEditing(false);
-  };
-
   const principal = (identity?.getPrincipal() as unknown as Principal)
     ?.toString()
     ?.slice(0, 16);
 
-  const fields = [
-    {
-      id: "pf-name",
-      icon: User,
-      label: "Full Name",
-      value: name,
-      onChange: setName,
-      ocid: "profile.name.input",
-      type: "text",
-    },
-    {
-      id: "pf-phone",
-      icon: Phone,
-      label: "Phone Number",
-      value: phone,
-      onChange: setPhone,
-      ocid: "profile.phone.input",
-      type: "tel",
-    },
-    {
-      id: "pf-location",
-      icon: MapPin,
-      label: "Location",
-      value: location,
-      onChange: setLocation,
-      ocid: "profile.location.input",
-      type: "text",
-    },
-  ];
+  const roleBadge = isMechanic
+    ? "Mechanic"
+    : userAppRole === "customer"
+      ? "Customer"
+      : null;
 
-  const roleBadge =
-    userAppRole === "mechanic"
-      ? "Mechanic"
-      : userAppRole === "customer"
-        ? "Customer"
-        : null;
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setProfileImage(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isMechanic) {
+      const yoe = Number(yearsOfExperience);
+      if (!yearsOfExperience || Number.isNaN(yoe) || yoe <= 0) {
+        toast.error("Years of experience must be a number greater than 0");
+        return;
+      }
+      if (!specialties.trim()) {
+        toast.error("Please enter your specialties");
+        return;
+      }
+    }
+
+    try {
+      await updateProfile.mutateAsync({
+        name: name.trim() || null,
+        profileImage: profileImage ?? null,
+        yearsOfExperience:
+          isMechanic && yearsOfExperience
+            ? BigInt(Math.floor(Number(yearsOfExperience)))
+            : null,
+        specialties: isMechanic ? specialties.trim() || null : null,
+      });
+      toast.success("Profile updated");
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to update profile";
+      toast.error(msg);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-full">
       <header className="px-5 pt-12 pb-5">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">Profile</h1>
-          <button
-            type="button"
-            data-ocid="profile.edit.button"
-            onClick={() => setEditing((e) => !e)}
-            className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center"
-          >
-            {editing ? (
-              <Check className="w-5 h-5 text-primary" />
-            ) : (
-              <Edit3 className="w-5 h-5 text-foreground" />
-            )}
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold text-foreground">Profile</h1>
       </header>
 
-      <div className="px-5 pb-6 flex flex-col gap-6">
+      <div className="px-5 pb-8 flex flex-col gap-6">
+        {/* Avatar section */}
         <motion.div
           className="flex flex-col items-center gap-3"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center shadow-yellow">
-            <span className="text-primary-foreground text-3xl font-bold">
-              {initials}
-            </span>
+          <div className="relative">
+            <Avatar src={profileImage} initials={initials} size={88} />
+            <button
+              type="button"
+              data-ocid="profile.avatar.upload_button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md border-2 border-background active:scale-95 transition-transform"
+            >
+              <Camera className="w-4 h-4 text-primary-foreground" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+            />
           </div>
           <div className="text-center">
             <p className="text-xl font-bold text-foreground">{profile.name}</p>
@@ -138,6 +186,7 @@ export default function ProfileTab({ profile, onSave, isSaving }: Props) {
           </div>
         </motion.div>
 
+        {/* Form */}
         <motion.form
           onSubmit={handleSave}
           className="flex flex-col gap-4"
@@ -145,49 +194,93 @@ export default function ProfileTab({ profile, onSave, isSaving }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {fields.map(
-            ({ id, icon: Icon, label, value, onChange, ocid, type }) => (
-              <div key={label} className="flex flex-col gap-1.5">
+          {/* Name */}
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="pf-name"
+              className="text-sm font-medium text-muted-foreground"
+            >
+              Full Name
+            </label>
+            <input
+              id="pf-name"
+              data-ocid="profile.name.input"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your full name"
+              className="w-full h-14 bg-card border border-border rounded-2xl px-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          {/* Mechanic-only fields */}
+          {isMechanic && (
+            <>
+              <div className="flex items-center gap-2 pt-1">
+                <Wrench className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-primary">
+                  Mechanic Details
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <label
-                  htmlFor={id}
+                  htmlFor="pf-yoe"
                   className="text-sm font-medium text-muted-foreground"
                 >
-                  {label}
+                  Years of Experience
                 </label>
-                <div className="relative">
-                  <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    id={id}
-                    data-ocid={ocid}
-                    type={type}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    disabled={!editing}
-                    className="w-full h-14 bg-card border border-border rounded-2xl pl-11 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed"
-                  />
-                </div>
+                <input
+                  id="pf-yoe"
+                  data-ocid="profile.years_experience.input"
+                  type="number"
+                  min="1"
+                  value={yearsOfExperience}
+                  onChange={(e) => setYearsOfExperience(e.target.value)}
+                  placeholder="e.g. 5"
+                  className="w-full h-14 bg-card border border-border rounded-2xl px-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
               </div>
-            ),
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="pf-specialties"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  Specialties
+                </label>
+                <input
+                  id="pf-specialties"
+                  data-ocid="profile.specialties.input"
+                  type="text"
+                  value={specialties}
+                  onChange={(e) => setSpecialties(e.target.value)}
+                  placeholder="e.g. Toyota, Honda, BMW"
+                  className="w-full h-14 bg-card border border-border rounded-2xl px-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </>
           )}
 
-          {editing && (
-            <button
-              data-ocid="profile.save.submit_button"
-              type="submit"
-              disabled={isSaving}
-              className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70"
-            >
-              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {isSaving ? "Saving..." : "Save Changes"}
-            </button>
-          )}
+          <button
+            data-ocid="profile.save.submit_button"
+            type="submit"
+            disabled={updateProfile.isPending}
+            className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70"
+          >
+            {updateProfile.isPending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : null}
+            {updateProfile.isPending ? "Saving..." : "Save Changes"}
+          </button>
         </motion.form>
 
+        {/* Account actions */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="mt-auto flex flex-col gap-3"
+          className="flex flex-col gap-3"
         >
           <button
             type="button"
