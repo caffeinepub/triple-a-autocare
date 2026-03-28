@@ -37,7 +37,9 @@ export default function ChatScreen({
     const handler = () => {
       const offset = window.innerHeight - (vv.offsetTop + vv.height);
       setViewportOffset(Math.max(0, offset));
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
     };
     vv.addEventListener("resize", handler);
     vv.addEventListener("scroll", handler);
@@ -73,9 +75,13 @@ export default function ChatScreen({
     });
   }
 
+  // Input bar height: 72px. Messages area needs bottom padding = inputBarHeight + viewportOffset
+  const INPUT_BAR_HEIGHT = 72;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-background"
+      className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background"
+      style={{ minHeight: "100dvh" }}
       data-ocid="chat.screen"
     >
       {/* Header */}
@@ -97,8 +103,11 @@ export default function ChatScreen({
         </div>
       </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+      {/* Messages — scrollable area with bottom padding to avoid being hidden behind input bar */}
+      <div
+        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"
+        style={{ paddingBottom: `${INPUT_BAR_HEIGHT + viewportOffset + 16}px` }}
+      >
         {isLoading ? (
           <div className="flex justify-center py-10">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -148,11 +157,12 @@ export default function ChatScreen({
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* Input bar — fixed above keyboard and safe area, z-index above the container */}
       <div
-        className="px-4 pt-3 bg-card border-t border-border shrink-0 flex items-center gap-2"
+        className="fixed left-0 right-0 z-[61] bg-card border-t border-border flex items-center gap-2 px-4 pt-3"
         style={{
-          paddingBottom: `max(1.5rem, calc(env(safe-area-inset-bottom) + ${viewportOffset}px))`,
+          bottom: `${viewportOffset}px`,
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)",
         }}
       >
         <input
