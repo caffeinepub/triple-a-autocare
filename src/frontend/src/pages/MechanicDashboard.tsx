@@ -148,13 +148,20 @@ export default function MechanicDashboard({ profile }: MechanicDashboardProps) {
       toast.error("You have an ongoing job. Complete it first.");
       return;
     }
-    console.log("[AcceptJob] requestId:", id, "mechanicName:", profile.name);
+    console.log(
+      "[AcceptJob] Accept triggered. requestId:",
+      id,
+      "mechanicName:",
+      profile.name,
+    );
     try {
-      await acceptServiceRequest.mutateAsync({
+      const result = await acceptServiceRequest.mutateAsync({
         requestId: id,
         mechanicName: profile.name,
       });
+      console.log("[AcceptJob] Accept result:", result);
       queryClient.refetchQueries({ queryKey: ["mechanicServiceRequests"] });
+      queryClient.refetchQueries({ queryKey: ["customerActiveRequest"] });
       toast.success("Job accepted — check Jobs tab");
     } catch (err) {
       console.error("[AcceptJob] Failed. requestId:", id, "error:", err);

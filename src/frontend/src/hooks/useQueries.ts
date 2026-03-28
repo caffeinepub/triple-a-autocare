@@ -213,7 +213,7 @@ export function useCustomerActiveRequest() {
       return actor.getCustomerActiveRequest();
     },
     enabled: !!actor && !isFetching,
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
 }
 
@@ -226,7 +226,7 @@ export function useSearchingRequests() {
       return actor.getSearchingRequests();
     },
     enabled: !!actor && !isFetching,
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
 }
 
@@ -278,7 +278,7 @@ export function useAcceptServiceRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["searchingRequests"] });
       queryClient.invalidateQueries({ queryKey: ["mechanicActiveJob"] });
-      queryClient.invalidateQueries({ queryKey: ["customerActiveRequest"] });
+      queryClient.refetchQueries({ queryKey: ["customerActiveRequest"] });
       queryClient.invalidateQueries({ queryKey: ["mechanicServiceRequests"] });
       queryClient.refetchQueries({ queryKey: ["mechanicServiceRequests"] });
     },
@@ -397,7 +397,7 @@ export function useGetServiceRequests() {
       return actor.getServiceRequests();
     },
     enabled: !!actor && !isFetching,
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
 }
 
