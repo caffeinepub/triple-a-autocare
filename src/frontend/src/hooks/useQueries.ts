@@ -252,6 +252,9 @@ export function useCreateServiceRequest() {
       location: string;
       issueDescription: string;
       serviceType: string;
+      latitude?: number | null;
+      longitude?: number | null;
+      address?: string | null;
     }) => {
       if (!actor) throw new Error("Not connected");
       return actor.createServiceRequest(
@@ -259,6 +262,9 @@ export function useCreateServiceRequest() {
         params.location,
         params.issueDescription,
         params.serviceType,
+        params.latitude ?? null,
+        params.longitude ?? null,
+        params.address ?? null,
       );
     },
     onSuccess: () => {

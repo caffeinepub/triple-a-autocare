@@ -27,7 +27,9 @@ export default function MechanicRequestModal({
 }: Props) {
   const [step, setStep] = useState<Step>("service-type");
   const [serviceMode, setServiceMode] = useState<ServiceMode>("come-to-me");
-  const [location, setLocation] = useState(profile?.location ?? "");
+  const [location, setLocation] = useState(
+    profile?.address ?? profile?.location ?? "",
+  );
   const [issueDescription, setIssueDescription] = useState("");
 
   const createServiceRequest = useCreateServiceRequest();
@@ -35,7 +37,7 @@ export default function MechanicRequestModal({
   const handleClose = () => {
     setStep("service-type");
     setServiceMode("come-to-me");
-    setLocation(profile?.location ?? "");
+    setLocation(profile?.address ?? profile?.location ?? "");
     setIssueDescription("");
     onClose();
   };
@@ -47,6 +49,9 @@ export default function MechanicRequestModal({
         location,
         issueDescription,
         serviceType: serviceMode === "come-to-me" ? "Come to Me" : "Workshop",
+        latitude: profile?.latitude ?? null,
+        longitude: profile?.longitude ?? null,
+        address: location,
       });
       setStep("success");
     } catch {

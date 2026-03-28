@@ -163,6 +163,9 @@ function AppContent() {
     name: string;
     phone: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
   }) => {
     if (!actor || !identity) return;
     const profileData: UserProfile = {
@@ -170,6 +173,9 @@ function AppContent() {
       name: data.name,
       phone: data.phone,
       location: data.location,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      address: data.address,
     };
     await saveProfileMutation.mutateAsync(profileData);
     queryClient.setQueryData(["profile"], profileData);
@@ -230,6 +236,7 @@ function AppContent() {
   if (profile === null || profile === undefined) {
     return (
       <OnboardingScreen
+        role={selectedRole}
         onComplete={async (data) => {
           if (!actor || !identity) return;
           const profileData: UserProfile = {
@@ -237,6 +244,9 @@ function AppContent() {
             name: data.name,
             phone: data.phone,
             location: data.location,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            address: data.address,
           };
           await saveProfileMutation.mutateAsync(profileData);
           queryClient.setQueryData(["profile"], profileData);

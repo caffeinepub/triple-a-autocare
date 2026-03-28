@@ -1,25 +1,78 @@
-import { Loader2, MapPin, Phone, User } from "lucide-react";
+import { Loader2, MapPin, Navigation, Phone, User } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 
 interface Props {
+  role: "customer" | "mechanic";
   onComplete: (data: {
     name: string;
     phone: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
   }) => Promise<void>;
   isSaving: boolean;
 }
 
-export default function OnboardingScreen({ onComplete, isSaving }: Props) {
+export default function OnboardingScreen({
+  role,
+  onComplete,
+  isSaving,
+}: Props) {
   const [name, setName] = useState("Paul");
   const [phone, setPhone] = useState("+234 ");
-  const [location, setLocation] = useState("Lagos, Nigeria");
+  const [address, setAddress] = useState("");
+  const [latitude, setLatitude] = useState<number | undefined>(undefined);
+  const [longitude, setLongitude] = useState<number | undefined>(undefined);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState("");
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setGeoError("Unable to get location. Enter manually.");
+      return;
+    }
+    setGeoLoading(true);
+    setGeoError("");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lon);
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
+          );
+          const data = await res.json();
+          setAddress(data.display_name ?? `${lat}, ${lon}`);
+        } catch {
+          setAddress(`${lat.toFixed(5)}, ${lon.toFixed(5)}`);
+        }
+        setGeoLoading(false);
+      },
+      () => {
+        setGeoError("Unable to get location. Enter manually.");
+        setGeoLoading(false);
+      },
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onComplete({ name, phone, location });
+    await onComplete({
+      name,
+      phone,
+      location: address,
+      latitude,
+      longitude,
+      address,
+    });
   };
+
+  const locationLabel =
+    role === "mechanic" ? "Workshop Location" : "Home Address";
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -84,24 +137,44 @@ export default function OnboardingScreen({ onComplete, isSaving }: Props) {
 
           <div className="flex flex-col gap-2">
             <label
-              htmlFor="ob-location"
+              htmlFor="ob-address"
               className="text-sm font-medium text-foreground"
             >
-              Your Location
+              {locationLabel}
             </label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
-                id="ob-location"
+                id="ob-address"
                 data-ocid="onboarding_location.input"
                 type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Lagos, Nigeria"
+                value={address}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  // Clear coords if user manually types
+                  setLatitude(undefined);
+                  setLongitude(undefined);
+                }}
+                placeholder="Enter your address"
                 className="w-full h-14 bg-card border border-border rounded-2xl pl-11 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               />
             </div>
+            <button
+              type="button"
+              data-ocid="onboarding.location.button"
+              onClick={handleUseCurrentLocation}
+              disabled={geoLoading}
+              className="flex items-center gap-2 text-sm text-primary font-medium py-2 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-60 self-start"
+            >
+              {geoLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Navigation className="w-4 h-4" />
+              )}
+              {geoLoading ? "Getting location..." : "Use current location"}
+            </button>
+            {geoError && <p className="text-xs text-destructive">{geoError}</p>}
           </div>
 
           <button

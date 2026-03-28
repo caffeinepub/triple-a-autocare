@@ -311,7 +311,7 @@ function ActiveJobCard({
             <div className="flex items-center gap-1 mt-1">
               <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground text-xs truncate">
-                {job.location}
+                {job.address || job.location}
               </span>
             </div>
           </div>
@@ -514,7 +514,7 @@ function JobHistoryCard({
           <div className="flex items-center gap-1 mt-0.5">
             <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
             <span className="text-muted-foreground text-xs truncate">
-              {job.location}
+              {job.address || job.location}
             </span>
           </div>
         </div>

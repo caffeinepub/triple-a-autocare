@@ -103,6 +103,9 @@ export interface ServiceRequest {
     price?: bigint;
     cancelledBy?: string;
     cancelReason?: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
 }
 export interface ChatMessage {
     id: string;
@@ -147,6 +150,9 @@ export interface UserProfile {
     name: string;
     phone: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
 }
 export interface Review {
     id: string;
@@ -191,7 +197,7 @@ export interface backendInterface {
     cancelServiceRequest(requestId: string, cancelledBy: string, reason: string | null): Promise<void>;
     completeJob(requestId: string): Promise<void>;
     createBooking(mechanicId: string, serviceType: string, scheduledDate: string, scheduledTime: string, notes: string | null): Promise<string>;
-    createServiceRequest(customerName: string, location: string, issueDescription: string, serviceType: string): Promise<string>;
+    createServiceRequest(customerName: string, location: string, issueDescription: string, serviceType: string, latitude: number | null, longitude: number | null, address: string | null): Promise<string>;
     customerRespondToPrice(requestId: string, accept: boolean): Promise<void>;
     getAllParts(): Promise<Array<Part>>;
     getAvailableMechanics(): Promise<Array<Mechanic>>;
@@ -322,17 +328,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createServiceRequest(arg0: string, arg1: string, arg2: string, arg3: string): Promise<string> {
+    async createServiceRequest(arg0: string, arg1: string, arg2: string, arg3: string, arg4: number | null, arg5: number | null, arg6: string | null): Promise<string> {
         if (this.processError) {
             try {
-                const result = await this.actor.createServiceRequest(arg0, arg1, arg2, arg3);
+                const result = await this.actor.createServiceRequest(arg0, arg1, arg2, arg3, arg4 == null ? [] : [arg4], arg5 == null ? [] : [arg5], arg6 == null ? [] : [arg6]);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createServiceRequest(arg0, arg1, arg2, arg3);
+            const result = await this.actor.createServiceRequest(arg0, arg1, arg2, arg3, arg4 == null ? [] : [arg4], arg5 == null ? [] : [arg5], arg6 == null ? [] : [arg6]);
             return result;
         }
     }
@@ -617,16 +623,25 @@ export class Backend implements backendInterface {
         }
     }
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
+        const candid: any = {
+            userId: arg0.userId,
+            name: arg0.name,
+            phone: arg0.phone,
+            location: arg0.location,
+            latitude: arg0.latitude != null ? [arg0.latitude] : [],
+            longitude: arg0.longitude != null ? [arg0.longitude] : [],
+            address: arg0.address != null ? [arg0.address] : [],
+        };
         if (this.processError) {
             try {
-                const result = await this.actor.saveCallerUserProfile(arg0);
+                const result = await this.actor.saveCallerUserProfile(candid);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveCallerUserProfile(arg0);
+            const result = await this.actor.saveCallerUserProfile(candid);
             return result;
         }
     }
@@ -762,7 +777,17 @@ function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Ar
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
-    return value.length === 0 ? null : value[0];
+    if (value.length === 0) return null;
+    const v = value[0];
+    return {
+        userId: v.userId,
+        name: v.name,
+        phone: v.phone,
+        location: v.location,
+        latitude: (v as any).latitude != null && (v as any).latitude.length > 0 ? (v as any).latitude[0] : undefined,
+        longitude: (v as any).longitude != null && (v as any).longitude.length > 0 ? (v as any).longitude[0] : undefined,
+        address: (v as any).address != null && (v as any).address.length > 0 ? (v as any).address[0] : undefined,
+    };
 }
 function from_candid_opt_bigint(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
@@ -781,6 +806,9 @@ function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uin
     location: string;
     cancelledBy: [] | [string];
     cancelReason: [] | [string];
+    latitude?: [] | [number];
+    longitude?: [] | [number];
+    address?: [] | [string];
 }): ServiceRequest {
     return {
         id: value.id,
@@ -795,7 +823,10 @@ function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uin
         customerId: value.customerId,
         location: value.location,
         cancelledBy: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.cancelledBy)),
-        cancelReason: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.cancelReason))
+        cancelReason: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.cancelReason)),
+        latitude: value.latitude != null ? record_opt_to_undefined(value.latitude.length === 0 ? null : value.latitude[0]) : undefined,
+        longitude: value.longitude != null ? record_opt_to_undefined(value.longitude.length === 0 ? null : value.longitude[0]) : undefined,
+        address: value.address != null ? record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.address)) : undefined
     };
 }
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {

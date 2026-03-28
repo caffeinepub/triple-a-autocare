@@ -77,6 +77,9 @@ export const ServiceRequest = IDL.Record({
   'location' : IDL.Text,
   'cancelledBy' : IDL.Opt(IDL.Text),
   'cancelReason' : IDL.Opt(IDL.Text),
+  'latitude' : IDL.Opt(IDL.Float64),
+  'longitude' : IDL.Opt(IDL.Float64),
+  'address' : IDL.Opt(IDL.Text),
 });
 export const Review = IDL.Record({
   'id' : IDL.Text,

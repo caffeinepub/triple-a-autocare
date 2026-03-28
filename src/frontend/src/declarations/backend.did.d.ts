@@ -79,6 +79,9 @@ export interface ServiceRequest {
   'cancelReason' : [] | [string],
   'customerId' : Principal,
   'location' : string,
+  'latitude' : [] | [number],
+  'longitude' : [] | [number],
+  'address' : [] | [string],
 }
 export type Time = bigint;
 export interface UserProfile {
@@ -86,6 +89,9 @@ export interface UserProfile {
   'name' : string,
   'phone' : string,
   'location' : string,
+  'latitude' : [] | [number],
+  'longitude' : [] | [number],
+  'address' : [] | [string],
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
@@ -102,7 +108,7 @@ export interface _SERVICE {
     string
   >,
   'createServiceRequest' : ActorMethod<
-    [string, string, string, string],
+    [string, string, string, string, [] | [number], [] | [number], [] | [string]],
     string
   >,
   'customerRespondToPrice' : ActorMethod<[string, boolean], undefined>,

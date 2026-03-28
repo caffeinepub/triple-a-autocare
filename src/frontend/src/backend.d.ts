@@ -21,6 +21,9 @@ export interface ServiceRequest {
     price?: bigint;
     cancelledBy?: string;
     cancelReason?: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
 }
 export interface Part {
     id: string;
@@ -57,6 +60,9 @@ export interface UserProfile {
     name: string;
     phone: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
 }
 export interface Review {
     id: string;
@@ -65,6 +71,14 @@ export interface Review {
     mechanicId: string;
     timestamp: Time;
     rating: bigint;
+}
+export interface ChatMessage {
+    id: string;
+    requestId: string;
+    senderId: Principal;
+    senderRole: string;
+    message: string;
+    createdAt: Time;
 }
 export enum UserRole {
     admin = "admin",
@@ -100,7 +114,7 @@ export interface backendInterface {
     cancelServiceRequest(requestId: string, cancelledBy: string, reason: string | null): Promise<void>;
     completeJob(requestId: string): Promise<void>;
     createBooking(mechanicId: string, serviceType: string, scheduledDate: string, scheduledTime: string, notes: string | null): Promise<string>;
-    createServiceRequest(customerName: string, location: string, issueDescription: string, serviceType: string): Promise<string>;
+    createServiceRequest(customerName: string, location: string, issueDescription: string, serviceType: string, latitude: number | null, longitude: number | null, address: string | null): Promise<string>;
     customerRespondToPrice(requestId: string, accept: boolean): Promise<void>;
     getAllParts(): Promise<Array<Part>>;
     getAvailableMechanics(): Promise<Array<Mechanic>>;
@@ -113,6 +127,7 @@ export interface backendInterface {
     getMechanic(id: string): Promise<Mechanic>;
     getMechanicActiveJob(): Promise<ServiceRequest | null>;
     getMechanicCompletedJobs(): Promise<Array<ServiceRequest>>;
+    getMessages(requestId: string): Promise<Array<ChatMessage>>;
     getPart(id: string): Promise<Part>;
     getReviews(mechanicId: string): Promise<Array<Review>>;
     getSearchingRequests(): Promise<Array<ServiceRequest>>;
@@ -123,6 +138,7 @@ export interface backendInterface {
     saveCallerUserAppRole(role: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     seedData(): Promise<void>;
+    sendMessage(requestId: string, message: string): Promise<void>;
     submitServicePrice(requestId: string, price: bigint): Promise<void>;
     updateBookingStatus(bookingId: string, newStatus: Variant_cancelled_pending_completed_confirmed): Promise<void>;
     updateServiceRequest(requestId: string, price: bigint, status: "price_sent"): Promise<void>;

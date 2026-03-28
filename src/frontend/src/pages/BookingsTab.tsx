@@ -178,7 +178,7 @@ function ActiveRequestCard({
             <div className="flex items-center gap-1 mt-0.5">
               <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground text-xs truncate">
-                {request.location}
+                {request.address || request.location}
               </span>
             </div>
           </div>
@@ -367,7 +367,7 @@ function HistoryCard({
           <div className="flex items-center gap-1 mt-0.5">
             <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
             <span className="text-muted-foreground text-xs truncate">
-              {request.location}
+              {request.address || request.location}
             </span>
           </div>
         </div>

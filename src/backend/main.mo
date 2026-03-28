@@ -59,11 +59,23 @@ actor {
     inStock : Bool;
   };
 
+  // V1 — original deployed UserProfile (no location coords)
+  type UserProfileV1 = {
+    userId : Principal;
+    name : Text;
+    location : Text;
+    phone : Text;
+  };
+
+  // V2 — current UserProfile with location coordinates
   public type UserProfile = {
     userId : Principal;
     name : Text;
     location : Text;
     phone : Text;
+    latitude : ?Float;
+    longitude : ?Float;
+    address : ?Text;
   };
 
   // V1 — original deployed type
@@ -110,8 +122,8 @@ actor {
     createdAt : Time.Time;
   };
 
-  // V3 — current type with cancellation metadata
-  type ServiceRequest = {
+  // V3 — type with cancellation metadata but no location coords
+  type ServiceRequestV3 = {
     id : Text;
     customerId : Principal;
     customerName : Text;
@@ -136,6 +148,35 @@ actor {
     createdAt : Time.Time;
   };
 
+  // V4 — current type with location coordinates
+  type ServiceRequest = {
+    id : Text;
+    customerId : Principal;
+    customerName : Text;
+    location : Text;
+    issueDescription : Text;
+    serviceType : Text;
+    status : {
+      #searching;
+      #accepted;
+      #on_the_way;
+      #arrived;
+      #price_sent;
+      #approved;
+      #cancelled;
+      #completed;
+    };
+    mechanicId : ?Principal;
+    mechanicName : ?Text;
+    price : ?Nat;
+    cancelledBy : ?Text;
+    cancelReason : ?Text;
+    latitude : ?Float;
+    longitude : ?Float;
+    address : ?Text;
+    createdAt : Time.Time;
+  };
+
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
@@ -143,8 +184,11 @@ actor {
   let reviews = Map.empty<Text, Review>();
   let parts = Map.empty<Text, Part>();
   let bookings = Map.empty<Text, Booking>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
+  // V1 stable storage for UserProfile — kept for migration only
+  let userProfiles = Map.empty<Principal, UserProfileV1>();
   let userRoles = Map.empty<Principal, Text>();
+  // V2 stable storage — current UserProfile with location coords
+  let userProfilesV2 = Map.empty<Principal, UserProfile>();
 
   // V1 stable storage — kept for migration only
   let serviceRequests = Map.empty<Text, ServiceRequestV1>();
@@ -152,14 +196,17 @@ actor {
   // V2 stable storage — previously deployed, kept for migration
   let serviceRequestsV2 = Map.empty<Text, ServiceRequestV2>();
 
-  // V3 stable storage — current version with cancellation fields
-  let serviceRequestsV3 = Map.empty<Text, ServiceRequest>();
+  // V3 stable storage — previously deployed, kept for migration
+  let serviceRequestsV3 = Map.empty<Text, ServiceRequestV3>();
 
-  // Migrate V1 → V3 and V2 → V3 on upgrade
+  // V4 stable storage — current version with location coords
+  let serviceRequestsV4 = Map.empty<Text, ServiceRequest>();
+
+  // Migrate V1/V2/V3 → V4 on upgrade
   system func postupgrade() {
     // Migrate from V1
     for (req in serviceRequests.values()) {
-      if (serviceRequestsV3.get(req.id) == null) {
+      if (serviceRequestsV4.get(req.id) == null) {
         let migrated : ServiceRequest = {
           id = req.id;
           customerId = req.customerId;
@@ -179,15 +226,18 @@ actor {
           price = null;
           cancelledBy = null;
           cancelReason = null;
+          latitude = null;
+          longitude = null;
+          address = null;
           createdAt = req.createdAt;
         };
-        serviceRequestsV3.add(req.id, migrated);
+        serviceRequestsV4.add(req.id, migrated);
       };
     };
 
     // Migrate from V2
     for (req in serviceRequestsV2.values()) {
-      if (serviceRequestsV3.get(req.id) == null) {
+      if (serviceRequestsV4.get(req.id) == null) {
         let migrated : ServiceRequest = {
           id = req.id;
           customerId = req.customerId;
@@ -201,9 +251,53 @@ actor {
           price = req.price;
           cancelledBy = null;
           cancelReason = null;
+          latitude = null;
+          longitude = null;
+          address = null;
           createdAt = req.createdAt;
         };
-        serviceRequestsV3.add(req.id, migrated);
+        serviceRequestsV4.add(req.id, migrated);
+      };
+    };
+
+    // Migrate UserProfile V1 → V2
+    for (p in userProfiles.values()) {
+      if (userProfilesV2.get(p.userId) == null) {
+        let migrated : UserProfile = {
+          userId = p.userId;
+          name = p.name;
+          location = p.location;
+          phone = p.phone;
+          latitude = null;
+          longitude = null;
+          address = null;
+        };
+        userProfilesV2.add(p.userId, migrated);
+      };
+    };
+
+    // Migrate from V3
+    for (req in serviceRequestsV3.values()) {
+      if (serviceRequestsV4.get(req.id) == null) {
+        let migrated : ServiceRequest = {
+          id = req.id;
+          customerId = req.customerId;
+          customerName = req.customerName;
+          location = req.location;
+          issueDescription = req.issueDescription;
+          serviceType = req.serviceType;
+          status = req.status;
+          mechanicId = req.mechanicId;
+          mechanicName = req.mechanicName;
+          price = req.price;
+          cancelledBy = req.cancelledBy;
+          cancelReason = req.cancelReason;
+          latitude = null;
+          longitude = null;
+          address = null;
+          createdAt = req.createdAt;
+        };
+        serviceRequestsV4.add(req.id, migrated);
       };
     };
   };
@@ -346,21 +440,21 @@ actor {
       profile with
       userId = caller;
     };
-    userProfiles.add(caller, updatedProfile);
+    userProfilesV2.add(caller, updatedProfile);
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
-    userProfiles.get(caller);
+    userProfilesV2.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
-    userProfiles.get(user);
+    userProfilesV2.get(user);
   };
 
   public shared ({ caller }) func saveCallerUserAppRole(role : Text) : async () {
@@ -520,13 +614,13 @@ actor {
     };
   };
 
-  public shared ({ caller }) func createServiceRequest(customerName : Text, location : Text, issueDescription : Text, serviceType : Text) : async Text {
+  public shared ({ caller }) func createServiceRequest(customerName : Text, location : Text, issueDescription : Text, serviceType : Text, latitude : ?Float, longitude : ?Float, address : ?Text) : async Text {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can create service requests");
     };
 
     // Enforce single active booking per customer
-    let customerActiveCount = serviceRequestsV3.values().filter(
+    let customerActiveCount = serviceRequestsV4.values().filter(
       func(r) {
         r.customerId == caller and
         (r.status == #searching or r.status == #accepted or r.status == #on_the_way
@@ -553,10 +647,13 @@ actor {
       price = null;
       cancelledBy = null;
       cancelReason = null;
+      latitude;
+      longitude;
+      address;
       createdAt = timestamp;
     };
 
-    serviceRequestsV3.add(requestId, request);
+    serviceRequestsV4.add(requestId, request);
     requestId;
   };
 
@@ -565,7 +662,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can view searching requests");
     };
 
-    let searchingRequests = serviceRequestsV3.values().filter(
+    let searchingRequests = serviceRequestsV4.values().filter(
       func(r) { r.status == #searching }
     );
     let requestsArray = searchingRequests.toArray();
@@ -582,7 +679,7 @@ actor {
     };
 
     // Enforce single active job per mechanic
-    let mechanicActiveCount = serviceRequestsV3.values().filter(
+    let mechanicActiveCount = serviceRequestsV4.values().filter(
       func(r) {
         r.mechanicId == ?caller and
         (r.status == #searching or r.status == #accepted or r.status == #on_the_way
@@ -593,7 +690,7 @@ actor {
       Runtime.trap("You already have an active job. Complete it before accepting another.");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -610,7 +707,7 @@ actor {
       mechanicId = ?caller;
       mechanicName = ?mechanicName;
     };
-    serviceRequestsV3.add(requestId, updatedRequest);
+    serviceRequestsV4.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func updateServiceRequestStatus(requestId : Text, newStatus : { #accepted; #on_the_way; #arrived; #completed }) : async () {
@@ -618,7 +715,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can update service request status");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -628,7 +725,7 @@ actor {
     };
 
     let updatedRequest = { request with status = newStatus };
-    serviceRequestsV3.add(requestId, updatedRequest);
+    serviceRequestsV4.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func submitServicePrice(requestId : Text, price : Nat) : async () {
@@ -636,7 +733,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -650,7 +747,7 @@ actor {
     };
 
     let updatedRequest = { request with status = #price_sent; price = ?price };
-    serviceRequestsV3.add(requestId, updatedRequest);
+    serviceRequestsV4.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func customerRespondToPrice(requestId : Text, accept : Bool) : async () {
@@ -658,7 +755,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -674,7 +771,7 @@ actor {
     let newStatus = if (accept) { #approved } else { #cancelled };
     let cancelledBy : ?Text = if (accept) { null } else { ?"customer" };
     let updatedRequest = { request with status = newStatus; cancelledBy };
-    serviceRequestsV3.add(requestId, updatedRequest);
+    serviceRequestsV4.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func completeJob(requestId : Text) : async () {
@@ -682,7 +779,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -696,16 +793,15 @@ actor {
     };
 
     let updatedRequest = { request with status = #completed };
-    serviceRequestsV3.add(requestId, updatedRequest);
+    serviceRequestsV4.add(requestId, updatedRequest);
   };
 
-  // Cancel a service request — callable by either customer or assigned mechanic
   public shared ({ caller }) func cancelServiceRequest(requestId : Text, cancelledBy : Text, reason : ?Text) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -730,7 +826,7 @@ actor {
       cancelledBy = ?cancelledBy;
       cancelReason = reason;
     };
-    serviceRequestsV3.add(requestId, updatedRequest);
+    serviceRequestsV4.add(requestId, updatedRequest);
   };
 
   public query ({ caller }) func getCustomerActiveRequest() : async ?ServiceRequest {
@@ -738,7 +834,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can get active requests");
     };
 
-    let activeRequestsOnly = serviceRequestsV3.values().filter(
+    let activeRequestsOnly = serviceRequestsV4.values().filter(
       func(r) {
         r.customerId == caller and
         r.status != #completed and r.status != #cancelled
@@ -759,7 +855,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can get active jobs");
     };
 
-    let activeRequestsOnly = serviceRequestsV3.values().filter(
+    let activeRequestsOnly = serviceRequestsV4.values().filter(
       func(r) {
         r.mechanicId == ?caller and
         (r.status == #accepted or r.status == #on_the_way or r.status == #arrived
@@ -781,7 +877,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let completed = serviceRequestsV3.values().filter(
+    let completed = serviceRequestsV4.values().filter(
       func(r) { r.customerId == caller and (r.status == #completed or r.status == #cancelled) }
     );
     let arr = completed.toArray();
@@ -797,7 +893,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let completed = serviceRequestsV3.values().filter(
+    let completed = serviceRequestsV4.values().filter(
       func(r) { r.mechanicId == ?caller and (r.status == #completed or r.status == #cancelled) }
     );
     let arr = completed.toArray();
@@ -808,13 +904,12 @@ actor {
     );
   };
 
-  // Returns all requests assigned to the calling mechanic (active, in-progress, or recently cancelled)
   public query ({ caller }) func getServiceRequests() : async [ServiceRequest] {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized");
     };
 
-    let assigned = serviceRequestsV3.values().filter(
+    let assigned = serviceRequestsV4.values().filter(
       func(r) {
         r.mechanicId == ?caller and
         (r.status == #accepted or r.status == #on_the_way or r.status == #arrived
@@ -829,13 +924,12 @@ actor {
     );
   };
 
-  // Generic update: set price and status to price_sent for the assigned mechanic
   public shared ({ caller }) func updateServiceRequest(requestId : Text, price : Nat, newStatus : { #price_sent }) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -847,7 +941,7 @@ actor {
     let updatedRequest = switch (newStatus) {
       case (#price_sent) { { request with status = #price_sent; price = ?price } };
     };
-    serviceRequestsV3.add(requestId, updatedRequest);
+    serviceRequestsV4.add(requestId, updatedRequest);
   };
 
   // -------------------------------------------------------------------------
@@ -870,7 +964,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -901,7 +995,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV3.get(requestId)) {
+    let request = switch (serviceRequestsV4.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
