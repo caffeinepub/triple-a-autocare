@@ -19,6 +19,8 @@ export interface ServiceRequest {
     customerId: Principal;
     location: string;
     price?: bigint;
+    cancelledBy?: string;
+    cancelReason?: string;
 }
 export interface Part {
     id: string;
@@ -95,6 +97,7 @@ export interface backendInterface {
     acceptServiceRequest(requestId: string, mechanicName: string): Promise<void>;
     addReview(mechanicId: string, rating: bigint, text: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    cancelServiceRequest(requestId: string, cancelledBy: string, reason: string | null): Promise<void>;
     completeJob(requestId: string): Promise<void>;
     createBooking(mechanicId: string, serviceType: string, scheduledDate: string, scheduledTime: string, notes: string | null): Promise<string>;
     createServiceRequest(customerName: string, location: string, issueDescription: string, serviceType: string): Promise<string>;

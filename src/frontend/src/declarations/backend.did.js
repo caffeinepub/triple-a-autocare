@@ -75,6 +75,8 @@ export const ServiceRequest = IDL.Record({
   'price' : IDL.Opt(IDL.Nat),
   'customerId' : IDL.Principal,
   'location' : IDL.Text,
+  'cancelledBy' : IDL.Opt(IDL.Text),
+  'cancelReason' : IDL.Opt(IDL.Text),
 });
 export const Review = IDL.Record({
   'id' : IDL.Text,
@@ -97,6 +99,7 @@ export const ChatMessage = IDL.Record({
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'acceptServiceRequest' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'cancelServiceRequest' : IDL.Func([IDL.Text, IDL.Text, IDL.Opt(IDL.Text)], [], []),
   'addReview' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'completeJob' : IDL.Func([IDL.Text], [], []),
@@ -248,6 +251,8 @@ export const idlFactory = ({ IDL }) => {
     'price' : IDL.Opt(IDL.Nat),
     'customerId' : IDL.Principal,
     'location' : IDL.Text,
+    'cancelledBy' : IDL.Opt(IDL.Text),
+    'cancelReason' : IDL.Opt(IDL.Text),
   });
   const Review = IDL.Record({
     'id' : IDL.Text,
@@ -261,6 +266,7 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'acceptServiceRequest' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'cancelServiceRequest' : IDL.Func([IDL.Text, IDL.Text, IDL.Opt(IDL.Text)], [], []),
     'addReview' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'completeJob' : IDL.Func([IDL.Text], [], []),

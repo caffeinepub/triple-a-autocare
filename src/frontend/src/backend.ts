@@ -101,6 +101,8 @@ export interface ServiceRequest {
     customerId: Principal;
     location: string;
     price?: bigint;
+    cancelledBy?: string;
+    cancelReason?: string;
 }
 export interface ChatMessage {
     id: string;
@@ -186,6 +188,7 @@ export interface backendInterface {
     acceptServiceRequest(requestId: string, mechanicName: string): Promise<void>;
     addReview(mechanicId: string, rating: bigint, text: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    cancelServiceRequest(requestId: string, cancelledBy: string, reason: string | null): Promise<void>;
     completeJob(requestId: string): Promise<void>;
     createBooking(mechanicId: string, serviceType: string, scheduledDate: string, scheduledTime: string, notes: string | null): Promise<string>;
     createServiceRequest(customerName: string, location: string, issueDescription: string, serviceType: string): Promise<string>;
@@ -274,6 +277,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async cancelServiceRequest(arg0: string, arg1: string, arg2: string | null): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.cancelServiceRequest(arg0, arg1, arg2 == null ? [] : [arg2]);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.cancelServiceRequest(arg0, arg1, arg2 == null ? [] : [arg2]);
             return result;
         }
     }
@@ -762,6 +779,8 @@ function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uin
     price: [] | [bigint];
     customerId: Principal;
     location: string;
+    cancelledBy: [] | [string];
+    cancelReason: [] | [string];
 }): ServiceRequest {
     return {
         id: value.id,
@@ -774,7 +793,9 @@ function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uin
         mechanicName: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.mechanicName)),
         price: record_opt_to_undefined(from_candid_opt_bigint(_uploadFile, _downloadFile, value.price)),
         customerId: value.customerId,
-        location: value.location
+        location: value.location,
+        cancelledBy: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.cancelledBy)),
+        cancelReason: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.cancelReason))
     };
 }
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {

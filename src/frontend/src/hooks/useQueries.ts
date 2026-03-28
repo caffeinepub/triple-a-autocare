@@ -426,6 +426,31 @@ export function useUpdateServiceRequest() {
   });
 }
 
+export function useCancelServiceRequest() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      requestId: string;
+      cancelledBy: string;
+      reason?: string;
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.cancelServiceRequest(
+        params.requestId,
+        params.cancelledBy,
+        params.reason ?? null,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customerActiveRequest"] });
+      queryClient.invalidateQueries({ queryKey: ["mechanicActiveJob"] });
+      queryClient.invalidateQueries({ queryKey: ["mechanicServiceRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["searchingRequests"] });
+    },
+  });
+}
+
 export {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,

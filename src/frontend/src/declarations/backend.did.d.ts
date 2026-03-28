@@ -75,6 +75,8 @@ export interface ServiceRequest {
   'mechanicId' : [] | [Principal],
   'mechanicName' : [] | [string],
   'price' : [] | [bigint],
+  'cancelledBy' : [] | [string],
+  'cancelReason' : [] | [string],
   'customerId' : Principal,
   'location' : string,
 }
@@ -93,6 +95,7 @@ export interface _SERVICE {
   'acceptServiceRequest' : ActorMethod<[string, string], undefined>,
   'addReview' : ActorMethod<[string, bigint, string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'cancelServiceRequest' : ActorMethod<[string, string, [] | [string]], undefined>,
   'completeJob' : ActorMethod<[string], undefined>,
   'createBooking' : ActorMethod<
     [string, string, string, string, [] | [string]],
