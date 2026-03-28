@@ -112,7 +112,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'createServiceRequest' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Float64), IDL.Opt(IDL.Float64), IDL.Opt(IDL.Text)],
       [IDL.Text],
       [],
     ),
@@ -279,7 +279,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'createServiceRequest' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Float64), IDL.Opt(IDL.Float64), IDL.Opt(IDL.Text)],
         [IDL.Text],
         [],
       ),

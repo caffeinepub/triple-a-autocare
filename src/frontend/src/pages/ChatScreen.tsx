@@ -20,6 +20,7 @@ export default function ChatScreen({
   const { data: messages, isLoading } = useGetMessages(requestId);
   const sendMessage = useSendMessage();
   const [input, setInput] = useState("");
+  const [viewportOffset, setViewportOffset] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesCount = messages?.length ?? 0;
 
@@ -29,15 +30,21 @@ export default function ChatScreen({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messagesCount]);
 
-  // Scroll to bottom when keyboard opens (visual viewport resize)
+  // Track visual viewport to push input above keyboard
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
     const handler = () => {
+      const offset = window.innerHeight - (vv.offsetTop + vv.height);
+      setViewportOffset(Math.max(0, offset));
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     };
     vv.addEventListener("resize", handler);
-    return () => vv.removeEventListener("resize", handler);
+    vv.addEventListener("scroll", handler);
+    return () => {
+      vv.removeEventListener("resize", handler);
+      vv.removeEventListener("scroll", handler);
+    };
   }, []);
 
   const handleSend = async () => {
@@ -68,7 +75,7 @@ export default function ChatScreen({
 
   return (
     <div
-      className="flex flex-col h-[100dvh] overflow-hidden bg-background"
+      className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-background"
       data-ocid="chat.screen"
     >
       {/* Header */}
@@ -144,7 +151,9 @@ export default function ChatScreen({
       {/* Input */}
       <div
         className="px-4 pt-3 bg-card border-t border-border shrink-0 flex items-center gap-2"
-        style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+        style={{
+          paddingBottom: `max(1.5rem, calc(env(safe-area-inset-bottom) + ${viewportOffset}px))`,
+        }}
       >
         <input
           type="text"
