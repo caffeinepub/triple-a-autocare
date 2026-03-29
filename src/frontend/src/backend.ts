@@ -234,6 +234,7 @@ export interface backendInterface {
     sendMessage(requestId: string, message: string): Promise<void>;
     getMechanicPublicProfile(mechanicId: Principal): Promise<UserProfile | null>;
     updateUserProfile(name: string | null, profileImage: string | null, yearsOfExperience: bigint | null, specialties: string | null): Promise<UserProfile>;
+    submitRating(requestId: string, rating: bigint, raterRole: string): Promise<void>;
 }
 import type { Booking as _Booking, ServiceRequest as _ServiceRequest, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -821,6 +822,20 @@ export class Backend implements backendInterface {
                 arg3 == null ? [] : [arg3],
             );
             return from_candid_UserProfile_record(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async submitRating(arg0: string, arg1: bigint, arg2: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.submitRating(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error('unreachable');
+            }
+        } else {
+            const result = await this.actor.submitRating(arg0, arg1, arg2);
+            return result;
         }
     }
 }

@@ -83,6 +83,8 @@ export interface ServiceRequest {
   'latitude' : [] | [number],
   'longitude' : [] | [number],
   'address' : [] | [string],
+  'customerRating' : [] | [bigint],
+  'mechanicRating' : [] | [bigint],
 }
 export type Time = bigint;
 export interface UserProfile {
@@ -153,6 +155,7 @@ export interface _SERVICE {
     ],
     undefined
   >,
+  'submitRating' : ActorMethod<[string, bigint, string], undefined>,
   'updateServiceRequest' : ActorMethod<
     [
       string,

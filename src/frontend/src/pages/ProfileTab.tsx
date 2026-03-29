@@ -1,11 +1,16 @@
 import type { Principal } from "@icp-sdk/core/principal";
-import { Camera, Loader2, LogOut, Wrench } from "lucide-react";
+import { Camera, Loader2, LogOut, Star, Wrench } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { UserProfile } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useUpdateUserProfile, useUserAppRole } from "../hooks/useQueries";
+import {
+  useCustomerCompletedRequests,
+  useMechanicCompletedJobs,
+  useUpdateUserProfile,
+  useUserAppRole,
+} from "../hooks/useQueries";
 
 interface Props {
   profile: UserProfile;
@@ -52,6 +57,34 @@ export default function ProfileTab({ profile }: Props) {
   const { clear, identity } = useInternetIdentity();
   const { data: userAppRole } = useUserAppRole();
   const updateProfile = useUpdateUserProfile();
+  const { data: customerHistory } = useCustomerCompletedRequests();
+  const { data: mechanicHistory } = useMechanicCompletedJobs();
+  const isMechanic = userAppRole === "mechanic";
+
+  // Compute rating stats
+  const ratingData = (() => {
+    if (isMechanic) {
+      const completed = (mechanicHistory ?? []).filter(
+        (r) => r.status === "completed" && r.mechanicRating != null,
+      );
+      if (completed.length === 0) return null;
+      const avg =
+        completed.reduce((sum, r) => sum + Number(r.mechanicRating!), 0) /
+        completed.length;
+      return { avg: Math.round(avg * 10) / 10, total: completed.length };
+    }
+    const completed = (customerHistory ?? []).filter(
+      (r) => r.status === "completed" && r.customerRating != null,
+    );
+    if (completed.length === 0) return null;
+    const avg =
+      completed.reduce((sum, r) => sum + Number(r.customerRating!), 0) /
+      completed.length;
+    return { avg: Math.round(avg * 10) / 10, total: completed.length };
+  })();
+  const totalCompleted = isMechanic
+    ? (mechanicHistory ?? []).filter((r) => r.status === "completed").length
+    : (customerHistory ?? []).filter((r) => r.status === "completed").length;
 
   const [name, setName] = useState(profile.name);
   const [profileImage, setProfileImage] = useState<string | undefined>(
@@ -77,8 +110,6 @@ export default function ProfileTab({ profile }: Props) {
     );
     setSpecialties(profile.specialties ?? "");
   }, [profile]);
-
-  const isMechanic = userAppRole === "mechanic";
 
   const initials = name
     .split(" ")
@@ -183,6 +214,33 @@ export default function ProfileTab({ profile }: Props) {
                 {principal}...
               </p>
             )}
+            {/* Rating stats */}
+            <div className="flex items-center gap-4 mt-1">
+              {ratingData ? (
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  <span className="text-foreground font-bold text-sm">
+                    {ratingData.avg}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    ({ratingData.total} rated)
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 text-muted-foreground/40" />
+                  <span className="text-muted-foreground text-xs">
+                    No ratings yet
+                  </span>
+                </div>
+              )}
+              {totalCompleted > 0 && (
+                <span className="text-muted-foreground text-xs">
+                  {totalCompleted} job{totalCompleted !== 1 ? "s" : ""}{" "}
+                  completed
+                </span>
+              )}
+            </div>
           </div>
         </motion.div>
 

@@ -21,6 +21,7 @@ import {
   useGetMessages,
   useGetServiceRequests,
   useMechanicCompletedJobs,
+  useSubmitRating,
   useUpdateServiceRequest,
   useUpdateServiceRequestStatus,
 } from "../hooks/useQueries";
@@ -496,6 +497,9 @@ function JobHistoryCard({
 }: { job: ExtendedServiceRequest; index: number }) {
   const isCompleted = job.status === "completed";
   const isCancelled = job.status === "cancelled";
+  const [selectedStars, setSelectedStars] = useState(0);
+  const [hoveredStar, setHoveredStar] = useState(0);
+  const submitRating = useSubmitRating();
 
   const dateStr = job.createdAt
     ? new Date(Number(job.createdAt) / 1_000_000).toLocaleDateString("en-NG", {
@@ -568,6 +572,69 @@ function JobHistoryCard({
           <span className="text-xs text-muted-foreground">{dateStr}</span>
         )}
       </div>
+
+      {isCompleted && (
+        <div className="mt-2 border-t border-border/50 pt-2">
+          {job.mechanicRating == null ? (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-muted-foreground">
+                Rate Customer
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      data-ocid="job_history.rating.toggle"
+                      onClick={() => setSelectedStars(star)}
+                      onMouseEnter={() => setHoveredStar(star)}
+                      onMouseLeave={() => setHoveredStar(0)}
+                      className="text-lg leading-none transition-transform hover:scale-110"
+                    >
+                      <span
+                        className={
+                          star <= (hoveredStar || selectedStars)
+                            ? "text-yellow-400"
+                            : "text-muted-foreground/40"
+                        }
+                      >
+                        ★
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  data-ocid="job_history.rating.submit_button"
+                  disabled={selectedStars === 0 || submitRating.isPending}
+                  onClick={async () => {
+                    if (selectedStars === 0) return;
+                    try {
+                      await submitRating.mutateAsync({
+                        requestId: job.id,
+                        rating: selectedStars,
+                        raterRole: "mechanic",
+                      });
+                      toast.success("Rating submitted!");
+                    } catch {
+                      toast.error("Failed to submit rating");
+                    }
+                  }}
+                  className="text-xs font-semibold bg-primary text-primary-foreground px-3 py-1 rounded-full disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                >
+                  {submitRating.isPending ? "..." : "Submit"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-yellow-400 font-medium">
+              You rated: {"★".repeat(Number(job.mechanicRating))}
+              {"☆".repeat(5 - Number(job.mechanicRating))}
+            </p>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }

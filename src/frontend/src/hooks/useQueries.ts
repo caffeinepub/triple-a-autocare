@@ -19,7 +19,10 @@ import { useInternetIdentity } from "./useInternetIdentity";
  * ExtendedServiceRequest is now just ServiceRequest — the backend wrapper
  * handles all status variants and the price field directly.
  */
-export type ExtendedServiceRequest = ServiceRequest;
+export type ExtendedServiceRequest = ServiceRequest & {
+  customerRating?: bigint;
+  mechanicRating?: bigint;
+};
 
 // ---------------------------------------------------------------------------
 // Generic backend hooks
@@ -561,3 +564,28 @@ export function countUnread(
 }
 
 export type { ChatMessage };
+
+export function useSubmitRating() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      requestId: string;
+      rating: number;
+      raterRole: "customer" | "mechanic";
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.submitRating(
+        params.requestId,
+        BigInt(params.rating),
+        params.raterRole,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customerCompletedRequests"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["mechanicCompletedJobs"] });
+    },
+  });
+}

@@ -87,6 +87,8 @@ export const ServiceRequest = IDL.Record({
   'latitude' : IDL.Opt(IDL.Float64),
   'longitude' : IDL.Opt(IDL.Float64),
   'address' : IDL.Opt(IDL.Text),
+  'customerRating' : IDL.Opt(IDL.Nat),
+  'mechanicRating' : IDL.Opt(IDL.Nat),
 });
 export const Review = IDL.Record({
   'id' : IDL.Text,
@@ -172,6 +174,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'submitRating' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
   'updateServiceRequest' : IDL.Func(
       [
         IDL.Text,
@@ -355,7 +358,8 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
-    'updateServiceRequest' : IDL.Func(
+    'submitRating' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
+  'updateServiceRequest' : IDL.Func(
         [
           IDL.Text,
           IDL.Nat,

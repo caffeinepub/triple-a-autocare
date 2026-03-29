@@ -163,8 +163,8 @@ actor {
     createdAt : Time.Time;
   };
 
-  // V4 — current type with location coordinates
-  type ServiceRequest = {
+  // V4 — previous stable type (kept for migration only, no rating fields)
+  type ServiceRequestV4 = {
     id : Text;
     customerId : Principal;
     customerName : Text;
@@ -192,6 +192,37 @@ actor {
     createdAt : Time.Time;
   };
 
+  // V5 — current type with rating fields
+  type ServiceRequest = {
+    id : Text;
+    customerId : Principal;
+    customerName : Text;
+    location : Text;
+    issueDescription : Text;
+    serviceType : Text;
+    status : {
+      #searching;
+      #accepted;
+      #on_the_way;
+      #arrived;
+      #price_sent;
+      #approved;
+      #cancelled;
+      #completed;
+    };
+    mechanicId : ?Principal;
+    mechanicName : ?Text;
+    price : ?Nat;
+    cancelledBy : ?Text;
+    cancelReason : ?Text;
+    latitude : ?Float;
+    longitude : ?Float;
+    address : ?Text;
+    customerRating : ?Nat;
+    mechanicRating : ?Nat;
+    createdAt : Time.Time;
+  };
+
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
@@ -216,14 +247,17 @@ actor {
   // V3 stable storage — previously deployed, kept for migration
   let serviceRequestsV3 = Map.empty<Text, ServiceRequestV3>();
 
-  // V4 stable storage — current version with location coords
-  let serviceRequestsV4 = Map.empty<Text, ServiceRequest>();
+  // V4 stable storage — kept for migration to V5
+  let serviceRequestsV4 = Map.empty<Text, ServiceRequestV4>();
+
+  // V5 stable storage — current version with rating fields
+  let serviceRequestsV5 = Map.empty<Text, ServiceRequest>();
 
   // Migrate V1/V2/V3 → V4 on upgrade
   system func postupgrade() {
     // Migrate from V1
     for (req in serviceRequests.values()) {
-      if (serviceRequestsV4.get(req.id) == null) {
+      if (serviceRequestsV5.get(req.id) == null) {
         let migrated : ServiceRequest = {
           id = req.id;
           customerId = req.customerId;
@@ -246,15 +280,17 @@ actor {
           latitude = null;
           longitude = null;
           address = null;
+          customerRating = null;
+          mechanicRating = null;
           createdAt = req.createdAt;
         };
-        serviceRequestsV4.add(req.id, migrated);
+        serviceRequestsV5.add(req.id, migrated);
       };
     };
 
     // Migrate from V2
     for (req in serviceRequestsV2.values()) {
-      if (serviceRequestsV4.get(req.id) == null) {
+      if (serviceRequestsV5.get(req.id) == null) {
         let migrated : ServiceRequest = {
           id = req.id;
           customerId = req.customerId;
@@ -271,9 +307,11 @@ actor {
           latitude = null;
           longitude = null;
           address = null;
+          customerRating = null;
+          mechanicRating = null;
           createdAt = req.createdAt;
         };
-        serviceRequestsV4.add(req.id, migrated);
+        serviceRequestsV5.add(req.id, migrated);
       };
     };
 
@@ -319,7 +357,7 @@ actor {
 
     // Migrate from V3
     for (req in serviceRequestsV3.values()) {
-      if (serviceRequestsV4.get(req.id) == null) {
+      if (serviceRequestsV5.get(req.id) == null) {
         let migrated : ServiceRequest = {
           id = req.id;
           customerId = req.customerId;
@@ -336,9 +374,11 @@ actor {
           latitude = null;
           longitude = null;
           address = null;
+          customerRating = null;
+          mechanicRating = null;
           createdAt = req.createdAt;
         };
-        serviceRequestsV4.add(req.id, migrated);
+        serviceRequestsV5.add(req.id, migrated);
       };
     };
 
@@ -357,6 +397,33 @@ actor {
         chatMessagesV2.add(msg.id, migrated);
       };
     };
+    // Migrate V4 → V5 (add rating fields)
+    for (req in serviceRequestsV4.values()) {
+      if (serviceRequestsV5.get(req.id) == null) {
+        let migrated : ServiceRequest = {
+          id = req.id;
+          customerId = req.customerId;
+          customerName = req.customerName;
+          location = req.location;
+          issueDescription = req.issueDescription;
+          serviceType = req.serviceType;
+          status = req.status;
+          mechanicId = req.mechanicId;
+          mechanicName = req.mechanicName;
+          price = req.price;
+          cancelledBy = req.cancelledBy;
+          cancelReason = req.cancelReason;
+          latitude = req.latitude;
+          longitude = req.longitude;
+          address = req.address;
+          customerRating = null;
+          mechanicRating = null;
+          createdAt = req.createdAt;
+        };
+        serviceRequestsV5.add(req.id, migrated);
+      };
+    };
+
   };
 
   // Helper: get V3 profile for a user, with lazy migration from V2
@@ -770,7 +837,7 @@ actor {
     };
 
     // Enforce single active booking per customer
-    let customerActiveCount = serviceRequestsV4.values().filter(
+    let customerActiveCount = serviceRequestsV5.values().filter(
       func(r) {
         r.customerId == caller and
         (r.status == #searching or r.status == #accepted or r.status == #on_the_way
@@ -800,10 +867,12 @@ actor {
       latitude;
       longitude;
       address;
+      customerRating = null;
+      mechanicRating = null;
       createdAt = timestamp;
     };
 
-    serviceRequestsV4.add(requestId, request);
+    serviceRequestsV5.add(requestId, request);
     requestId;
   };
 
@@ -812,7 +881,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can view searching requests");
     };
 
-    let searchingRequests = serviceRequestsV4.values().filter(
+    let searchingRequests = serviceRequestsV5.values().filter(
       func(r) { r.status == #searching }
     );
     let requestsArray = searchingRequests.toArray();
@@ -829,7 +898,7 @@ actor {
     };
 
     // Enforce single active job per mechanic
-    let mechanicActiveCount = serviceRequestsV4.values().filter(
+    let mechanicActiveCount = serviceRequestsV5.values().filter(
       func(r) {
         r.mechanicId == ?caller and
         (r.status == #searching or r.status == #accepted or r.status == #on_the_way
@@ -840,7 +909,7 @@ actor {
       Runtime.trap("You already have an active job. Complete it before accepting another.");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -857,7 +926,7 @@ actor {
       mechanicId = ?caller;
       mechanicName = ?mechanicName;
     };
-    serviceRequestsV4.add(requestId, updatedRequest);
+    serviceRequestsV5.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func updateServiceRequestStatus(requestId : Text, newStatus : { #accepted; #on_the_way; #arrived; #completed }) : async () {
@@ -865,7 +934,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can update service request status");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -875,7 +944,7 @@ actor {
     };
 
     let updatedRequest = { request with status = newStatus };
-    serviceRequestsV4.add(requestId, updatedRequest);
+    serviceRequestsV5.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func submitServicePrice(requestId : Text, price : Nat) : async () {
@@ -883,7 +952,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -897,7 +966,7 @@ actor {
     };
 
     let updatedRequest = { request with status = #price_sent; price = ?price };
-    serviceRequestsV4.add(requestId, updatedRequest);
+    serviceRequestsV5.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func customerRespondToPrice(requestId : Text, accept : Bool) : async () {
@@ -905,7 +974,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -921,7 +990,7 @@ actor {
     let newStatus = if (accept) { #approved } else { #cancelled };
     let cancelledBy : ?Text = if (accept) { null } else { ?"customer" };
     let updatedRequest = { request with status = newStatus; cancelledBy };
-    serviceRequestsV4.add(requestId, updatedRequest);
+    serviceRequestsV5.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func completeJob(requestId : Text) : async () {
@@ -929,7 +998,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -943,7 +1012,7 @@ actor {
     };
 
     let updatedRequest = { request with status = #completed };
-    serviceRequestsV4.add(requestId, updatedRequest);
+    serviceRequestsV5.add(requestId, updatedRequest);
   };
 
   public shared ({ caller }) func cancelServiceRequest(requestId : Text, cancelledBy : Text, reason : ?Text) : async () {
@@ -951,7 +1020,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -976,7 +1045,7 @@ actor {
       cancelledBy = ?cancelledBy;
       cancelReason = reason;
     };
-    serviceRequestsV4.add(requestId, updatedRequest);
+    serviceRequestsV5.add(requestId, updatedRequest);
   };
 
   public query ({ caller }) func getCustomerActiveRequest() : async ?ServiceRequest {
@@ -984,7 +1053,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can get active requests");
     };
 
-    let activeRequestsOnly = serviceRequestsV4.values().filter(
+    let activeRequestsOnly = serviceRequestsV5.values().filter(
       func(r) {
         r.customerId == caller and
         r.status != #completed and r.status != #cancelled
@@ -1005,7 +1074,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can get active jobs");
     };
 
-    let activeRequestsOnly = serviceRequestsV4.values().filter(
+    let activeRequestsOnly = serviceRequestsV5.values().filter(
       func(r) {
         r.mechanicId == ?caller and
         (r.status == #accepted or r.status == #on_the_way or r.status == #arrived
@@ -1027,7 +1096,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let completed = serviceRequestsV4.values().filter(
+    let completed = serviceRequestsV5.values().filter(
       func(r) { r.customerId == caller and (r.status == #completed or r.status == #cancelled) }
     );
     let arr = completed.toArray();
@@ -1043,7 +1112,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let completed = serviceRequestsV4.values().filter(
+    let completed = serviceRequestsV5.values().filter(
       func(r) { r.mechanicId == ?caller and (r.status == #completed or r.status == #cancelled) }
     );
     let arr = completed.toArray();
@@ -1059,7 +1128,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let assigned = serviceRequestsV4.values().filter(
+    let assigned = serviceRequestsV5.values().filter(
       func(r) {
         r.mechanicId == ?caller and
         (r.status == #accepted or r.status == #on_the_way or r.status == #arrived
@@ -1079,7 +1148,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -1091,7 +1160,7 @@ actor {
     let updatedRequest = switch (newStatus) {
       case (#price_sent) { { request with status = #price_sent; price = ?price } };
     };
-    serviceRequestsV4.add(requestId, updatedRequest);
+    serviceRequestsV5.add(requestId, updatedRequest);
   };
 
   // -------------------------------------------------------------------------
@@ -1132,7 +1201,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -1164,7 +1233,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -1190,7 +1259,7 @@ actor {
       Runtime.trap("Unauthorized");
     };
 
-    let request = switch (serviceRequestsV4.get(requestId)) {
+    let request = switch (serviceRequestsV5.get(requestId)) {
       case (null) { Runtime.trap("Service request not found") };
       case (?r) { r };
     };
@@ -1205,6 +1274,47 @@ actor {
         let updated : ChatMessage = { msg with isRead = true };
         chatMessagesV2.add(msg.id, updated);
       };
+    };
+  };
+
+  public shared ({ caller }) func submitRating(requestId : Text, rating : Nat, raterRole : Text) : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized");
+    };
+
+    if (rating < 1 or rating > 5) {
+      Runtime.trap("Rating must be between 1 and 5");
+    };
+
+    let request = switch (serviceRequestsV5.get(requestId)) {
+      case (null) { Runtime.trap("Service request not found") };
+      case (?r) { r };
+    };
+
+    if (request.status != #completed) {
+      Runtime.trap("Can only rate a completed job");
+    };
+
+    if (raterRole == "customer") {
+      if (request.customerId != caller) {
+        Runtime.trap("Unauthorized: Only the customer can submit a customer rating");
+      };
+      if (request.customerRating != null) {
+        Runtime.trap("You have already rated this job");
+      };
+      let updated = { request with customerRating = ?rating };
+      serviceRequestsV5.add(requestId, updated);
+    } else if (raterRole == "mechanic") {
+      if (request.mechanicId != ?caller) {
+        Runtime.trap("Unauthorized: Only the assigned mechanic can submit a mechanic rating");
+      };
+      if (request.mechanicRating != null) {
+        Runtime.trap("You have already rated this job");
+      };
+      let updated = { request with mechanicRating = ?rating };
+      serviceRequestsV5.add(requestId, updated);
+    } else {
+      Runtime.trap("Invalid raterRole — must be 'customer' or 'mechanic'");
     };
   };
 };

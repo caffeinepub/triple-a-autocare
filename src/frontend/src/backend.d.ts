@@ -24,6 +24,8 @@ export interface ServiceRequest {
     latitude?: number;
     longitude?: number;
     address?: string;
+    customerRating?: bigint;
+    mechanicRating?: bigint;
 }
 export interface Part {
     id: string;
@@ -143,6 +145,7 @@ export interface backendInterface {
     sendMessage(requestId: string, message: string): Promise<void>;
     submitServicePrice(requestId: string, price: bigint): Promise<void>;
     updateBookingStatus(bookingId: string, newStatus: Variant_cancelled_pending_completed_confirmed): Promise<void>;
+    submitRating(requestId: string, rating: bigint, raterRole: string): Promise<void>;
     updateServiceRequest(requestId: string, price: bigint, status: "price_sent"): Promise<void>;
     updateServiceRequestStatus(requestId: string, newStatus: Variant_on_the_way_arrived_completed_accepted): Promise<void>;
 }
