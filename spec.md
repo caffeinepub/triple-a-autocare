@@ -1,27 +1,42 @@
-# Triple A AutoCare
+# Triple A AutoCare — Profile System Upgrade
 
 ## Current State
-- Backend `main.mo` already has `UserProfile` V3 with `profileImage`, `role`, `yearsOfExperience`, `specialties` fields
-- `updateUserProfile()` and `getMechanicPublicProfile()` methods exist in backend and `backend.ts`
-- `ProfileTab.tsx` already has avatar upload, mechanic fields, save logic
-- `BookingsTab.tsx` already has `MechanicInfoRow` showing mechanic profile image + experience
-- `useQueries.ts` already has `useUpdateUserProfile` and `useGetMechanicProfile` hooks
-- `backend.d.ts` is STALE — `UserProfile` interface missing `profileImage`, `role`, `yearsOfExperience`, `specialties`; also missing `updateUserProfile` and `getMechanicPublicProfile` in `backendInterface`
-- `MechanicJobsTab.tsx` shows customer initials only, not profile images
+- `UserProfile` in Motoko has: userId, name, phone, location, latitude?, longitude?, address?
+- `userProfilesV2` is the current stable map storage
+- ProfileTab shows name, phone, location fields with edit mode; no profile image
+- No mechanic-specific profile fields (yearsOfExperience, specialties)
+- No `updateUserProfile` partial-update method
+- No `getMechanicPublicProfile` for cross-user lookup
+- Mechanic cards in customer view show only initials, no profile image or experience info
 
 ## Requested Changes (Diff)
 
 ### Add
-- `updateUserProfile` and `getMechanicPublicProfile` to `backendInterface` in `backend.d.ts`
+- New `UserProfile` V3 type in Motoko: adds `profileImage: ?Text`, `role: ?Text`, `yearsOfExperience: ?Nat`, `specialties: ?Text`
+- `userProfilesV3` stable map as new primary storage
+- Migration from V2 → V3 in `postupgrade`
+- `updateUserProfile(name: ?Text, profileImage: ?Text, yearsOfExperience: ?Nat, specialties: ?Text) : async UserProfile` — partial update, respects role for mechanic-only fields
+- `getMechanicPublicProfile(mechanicId: Principal) : async ?UserProfile` — query for cross-user lookup
+- ProfileTab: circle avatar with tap-to-upload, mechanic-only fields (yearsOfExperience, specialties), save with loading state + success toast
+- `useUpdateUserProfile` and `useGetMechanicProfile` hooks in useQueries.ts
 
 ### Modify
-- `UserProfile` in `backend.d.ts` to include `profileImage?`, `role?`, `yearsOfExperience?`, `specialties?`
-- `MechanicJobsTab` customer avatar to show profile image if available (via `useGetMechanicProfile` hook keyed on customer principal... actually customer profile lookup is not exposed publicly; keep initials for now but ensure the existing implementation is clean)
+- `UserProfile` TypeScript interface: add profileImage?, role?, yearsOfExperience?, specialties?
+- `backendInterface`: add `updateUserProfile`, `getMechanicPublicProfile`
+- `backend.did.js` and `backend.did.d.ts`: update UserProfile IDL record and _SERVICE with new methods
+- `backend.ts` wrapper: update `from_candid_opt_n8`, `saveCallerUserProfile`, add new method implementations
+- `getCallerUserProfile` in Motoko: read from V3 first, fall back to V2
+- `saveCallerUserProfile` in Motoko: write to V3
+- MechanicJobsTab ActiveJobCard: show profile image circle instead of initials only
+- BookingsTab ActiveRequestCard: show mechanic profile image + experience + specialties when available
 
 ### Remove
-- Nothing
+- Nothing removed
 
 ## Implementation Plan
-1. Update `backend.d.ts` `UserProfile` interface with new fields
-2. Add `updateUserProfile` and `getMechanicPublicProfile` to `backendInterface` in `backend.d.ts`
-3. Validate frontend builds cleanly
+1. Update `main.mo`: add V3 UserProfile type, userProfilesV3 map, migration, updateUserProfile, getMechanicPublicProfile, update getCallerUserProfile and saveCallerUserProfile
+2. Update `backend.did.js`: add new UserProfile fields in IDL, add new methods
+3. Update `backend.did.d.ts`: update UserProfile interface and _SERVICE
+4. Update `backend.d.ts`: update UserProfile interface, add methods to backendInterface
+5. Update `backend.ts`: update from_candid_opt_n8, saveCallerUserProfile, add updateUserProfile and getMechanicPublicProfile
+6. Frontend: ProfileTab redesign with image upload + mechanic fields; update hooks; update MechanicJobsTab and BookingsTab for profile images

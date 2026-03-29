@@ -63,10 +63,6 @@ export interface UserProfile {
     latitude?: number;
     longitude?: number;
     address?: string;
-    profileImage?: string;
-    role?: string;
-    yearsOfExperience?: bigint;
-    specialties?: string;
 }
 export interface Review {
     id: string;
@@ -132,7 +128,6 @@ export interface backendInterface {
     getMechanic(id: string): Promise<Mechanic>;
     getMechanicActiveJob(): Promise<ServiceRequest | null>;
     getMechanicCompletedJobs(): Promise<Array<ServiceRequest>>;
-    getMechanicPublicProfile(mechanicId: Principal): Promise<UserProfile | null>;
     getMessages(requestId: string): Promise<Array<ChatMessage>>;
     getPart(id: string): Promise<Part>;
     getReviews(mechanicId: string): Promise<Array<Review>>;
@@ -143,7 +138,6 @@ export interface backendInterface {
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserAppRole(role: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    updateUserProfile(name: string | null, profileImage: string | null, yearsOfExperience: bigint | null, specialties: string | null): Promise<UserProfile>;
     seedData(): Promise<void>;
     markMessagesRead(requestId: string): Promise<void>;
     sendMessage(requestId: string, message: string): Promise<void>;
