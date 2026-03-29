@@ -255,7 +255,9 @@ export function useCustomerActiveRequest() {
       return actor.getCustomerActiveRequest();
     },
     enabled: !!actor && !isFetching,
-    refetchInterval: 3000,
+    refetchInterval: 2000,
+    staleTime: 0,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -268,7 +270,8 @@ export function useSearchingRequests() {
       return actor.getSearchingRequests();
     },
     enabled: !!actor && !isFetching,
-    refetchInterval: 3000,
+    refetchInterval: 2000,
+    staleTime: 0,
   });
 }
 

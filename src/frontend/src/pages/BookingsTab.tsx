@@ -9,9 +9,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
   CheckCircle,
+  CheckCircle2,
   Clock,
   History,
   Loader2,
@@ -81,7 +83,7 @@ const REQUEST_STATUS_LABELS: Record<string, string> = {
 
 const REQUEST_STATUS_COLORS: Record<string, string> = {
   searching: "bg-yellow-500/15 text-yellow-400",
-  accepted: "bg-yellow-500/15 text-yellow-400",
+  accepted: "bg-green-500/15 text-green-400",
   on_the_way: "bg-blue-500/15 text-blue-400",
   arrived: "bg-orange-500/15 text-orange-400",
   price_sent: "bg-purple-500/15 text-purple-400",
@@ -224,6 +226,7 @@ function ActiveRequestCard({
   };
 
   const mechanicIdStr = request.mechanicId?.toString();
+  const isAccepted = request.status === "accepted";
 
   return (
     <>
@@ -260,7 +263,7 @@ function ActiveRequestCard({
           </div>
         </div>
 
-        {/* Searching pulse indicator */}
+        {/* Searching pulse indicator — only when status is searching */}
         {request.status === "searching" && (
           <div className="flex items-center gap-2 text-sm text-yellow-400">
             <span className="relative flex h-2.5 w-2.5">
@@ -269,6 +272,27 @@ function ActiveRequestCard({
             </span>
             Searching for a nearby mechanic...
           </div>
+        )}
+
+        {/* Mechanic Accepted banner — shown immediately when accepted */}
+        {isAccepted && request.mechanicName && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.25 }}
+            data-ocid="bookings.mechanic_accepted.panel"
+            className="flex items-center gap-2.5 rounded-xl bg-green-500/15 border border-green-500/30 px-4 py-3"
+          >
+            <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-green-400 font-bold text-sm">
+                Mechanic Accepted!
+              </span>
+              <span className="text-green-300/80 text-xs">
+                {request.mechanicName} is on the way
+              </span>
+            </div>
+          </motion.div>
         )}
 
         <p className="text-foreground/70 text-sm leading-relaxed">
@@ -582,6 +606,23 @@ export default function BookingsTab({
     mechanicName: string;
     bookingId: string;
   } | null>(null);
+
+  const queryClient = useQueryClient();
+  const prevStatusRef = useRef<string | null>(null);
+
+  // Instant refetch when status transitions away from "searching"
+  useEffect(() => {
+    const currentStatus = activeRequest?.status ?? null;
+    if (
+      prevStatusRef.current === "searching" &&
+      currentStatus !== null &&
+      currentStatus !== "searching"
+    ) {
+      queryClient.refetchQueries({ queryKey: ["customerActiveRequest"] });
+      queryClient.invalidateQueries({ queryKey: ["searchingRequests"] });
+    }
+    prevStatusRef.current = currentStatus;
+  }, [activeRequest?.status, queryClient]);
 
   const getMechanicName = (id: string) =>
     mechanics?.find((m) => m.id === id)?.name ?? "Unknown Mechanic";
