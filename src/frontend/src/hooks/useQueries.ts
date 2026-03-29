@@ -12,6 +12,7 @@ import {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
 } from "../backend";
+import { getEmailIdentity } from "../utils/emailIdentityStore";
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
@@ -82,8 +83,15 @@ function getAppRoleKey(principal: string) {
 
 export function useUserAppRole() {
   const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
-  const principal = identity?.getPrincipal().toString() ?? "";
+  const emailPrincipal = getEmailIdentity()?.getPrincipal();
+  const iiPrincipal = identity?.getPrincipal();
+  const effectivePrincipal =
+    emailPrincipal && !emailPrincipal.isAnonymous()
+      ? emailPrincipal
+      : iiPrincipal;
+  const principal = effectivePrincipal?.toString() ?? "";
+  const isAuthenticated =
+    !!effectivePrincipal && !effectivePrincipal.isAnonymous();
 
   return useQuery<string>({
     queryKey: ["userAppRole", principal],
@@ -97,7 +105,13 @@ export function useUserAppRole() {
 export function useSaveUserAppRole() {
   const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
-  const principal = identity?.getPrincipal().toString() ?? "";
+  const emailPrincipal = getEmailIdentity()?.getPrincipal();
+  const iiPrincipal = identity?.getPrincipal();
+  const effectivePrincipal =
+    emailPrincipal && !emailPrincipal.isAnonymous()
+      ? emailPrincipal
+      : iiPrincipal;
+  const principal = effectivePrincipal?.toString() ?? "";
 
   return useMutation({
     mutationFn: async (role: string) => {

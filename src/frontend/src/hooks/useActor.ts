@@ -1,13 +1,24 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { backendInterface } from "../backend";
 import { createActorWithConfig } from "../config";
+import {
+  getEmailIdentity,
+  subscribeEmailIdentity,
+} from "../utils/emailIdentityStore";
 import { getSecretParameter } from "../utils/urlParams";
 import { useInternetIdentity } from "./useInternetIdentity";
 
 const ACTOR_QUERY_KEY = "actor";
 export function useActor() {
-  const { identity } = useInternetIdentity();
+  const { identity: iiIdentity } = useInternetIdentity();
+  const [emailIdentity, setEmailIdentityState] = useState(getEmailIdentity);
+
+  useEffect(() => {
+    return subscribeEmailIdentity(setEmailIdentityState);
+  }, []);
+
+  const identity = emailIdentity ?? iiIdentity;
   const queryClient = useQueryClient();
   const actorQuery = useQuery<backendInterface>({
     queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],

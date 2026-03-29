@@ -65,6 +65,10 @@ export interface UserProfile {
     latitude?: number;
     longitude?: number;
     address?: string;
+    profileImage?: string;
+    role?: string;
+    yearsOfExperience?: bigint;
+    specialties?: string;
 }
 export interface Review {
     id: string;
@@ -130,6 +134,7 @@ export interface backendInterface {
     getMechanic(id: string): Promise<Mechanic>;
     getMechanicActiveJob(): Promise<ServiceRequest | null>;
     getMechanicCompletedJobs(): Promise<Array<ServiceRequest>>;
+    getMechanicPublicProfile(mechanicId: Principal): Promise<UserProfile | null>;
     getMessages(requestId: string): Promise<Array<ChatMessage>>;
     getPart(id: string): Promise<Part>;
     getReviews(mechanicId: string): Promise<Array<Review>>;
@@ -148,4 +153,5 @@ export interface backendInterface {
     submitRating(requestId: string, rating: bigint, raterRole: string): Promise<void>;
     updateServiceRequest(requestId: string, price: bigint, status: "price_sent"): Promise<void>;
     updateServiceRequestStatus(requestId: string, newStatus: Variant_on_the_way_arrived_completed_accepted): Promise<void>;
+    updateUserProfile(name: string | null, profileImage: string | null, yearsOfExperience: bigint | null, specialties: string | null): Promise<UserProfile>;
 }
