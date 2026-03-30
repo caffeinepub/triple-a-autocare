@@ -148,25 +148,31 @@ export default function ProfileTab({ profile }: Props) {
         return;
       }
       if (!specialties.trim()) {
-        toast.error("Please enter your specialties");
+        toast.error("Specialization must not be empty");
         return;
       }
     }
 
+    const payload = {
+      name: name.trim() || null,
+      profileImage: profileImage ?? null,
+      yearsOfExperience:
+        isMechanic && yearsOfExperience
+          ? BigInt(Math.floor(Number(yearsOfExperience)))
+          : null,
+      specialties: isMechanic ? specialties.trim() || null : null,
+    };
+
+    console.log("[ProfileTab] Submitting profile update:", payload);
+
     try {
-      await updateProfile.mutateAsync({
-        name: name.trim() || null,
-        profileImage: profileImage ?? null,
-        yearsOfExperience:
-          isMechanic && yearsOfExperience
-            ? BigInt(Math.floor(Number(yearsOfExperience)))
-            : null,
-        specialties: isMechanic ? specialties.trim() || null : null,
-      });
-      toast.success("Profile updated");
+      const result = await updateProfile.mutateAsync(payload);
+      console.log("[ProfileTab] Backend response:", result);
+      toast.success("Profile updated successfully");
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to update profile";
+      console.error("[ProfileTab] Update error:", err);
       toast.error(msg);
     }
   };
@@ -188,7 +194,7 @@ export default function ProfileTab({ profile }: Props) {
             <Avatar src={profileImage} initials={initials} size={88} />
             <button
               type="button"
-              data-ocid="profile.avatar.upload_button"
+              data-ocid="profile.upload_button"
               onClick={() => fileInputRef.current?.click()}
               className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md border-2 border-background active:scale-95 transition-transform"
             >

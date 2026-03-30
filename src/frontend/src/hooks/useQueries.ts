@@ -104,6 +104,7 @@ export function useUserAppRole() {
 
 export function useSaveUserAppRole() {
   const { identity } = useInternetIdentity();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
   const emailPrincipal = getEmailIdentity()?.getPrincipal();
   const iiPrincipal = identity?.getPrincipal();
@@ -120,6 +121,14 @@ export function useSaveUserAppRole() {
         localStorage.removeItem(getAppRoleKey(principal));
       } else {
         localStorage.setItem(getAppRoleKey(principal), role);
+      }
+      // Also persist role to backend so updateUserProfile can identify mechanic
+      if (actor && role) {
+        try {
+          await actor.saveCallerUserAppRole(role);
+        } catch (e) {
+          console.warn("[useSaveUserAppRole] backend role save failed:", e);
+        }
       }
     },
     onSuccess: (_, role) => {

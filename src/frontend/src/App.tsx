@@ -202,6 +202,11 @@ function AppContent() {
         role={selectedRole}
         onComplete={async (data) => {
           if (!actor || !identity) return;
+          // Capture pending role BEFORE removing it from sessionStorage
+          const pendingRole = sessionStorage.getItem("pending-role") as
+            | "customer"
+            | "mechanic"
+            | null;
           const profileData: UserProfile = {
             userId: identity.getPrincipal() as unknown as Principal,
             name: data.name,
@@ -210,15 +215,11 @@ function AppContent() {
             latitude: data.latitude,
             longitude: data.longitude,
             address: data.address,
+            role: pendingRole ?? undefined,
           };
           await saveProfileMutation.mutateAsync(profileData);
           queryClient.setQueryData(["profile"], profileData);
 
-          // Auto-apply pending role from signup button selection
-          const pendingRole = sessionStorage.getItem("pending-role") as
-            | "customer"
-            | "mechanic"
-            | null;
           if (pendingRole) {
             sessionStorage.removeItem("pending-role");
             await saveRoleMutation.mutateAsync(pendingRole);
