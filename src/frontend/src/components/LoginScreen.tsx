@@ -35,6 +35,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleGoogleLogin = () => {
     sessionStorage.setItem("pending-role", selectedRole);
@@ -49,6 +50,10 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
     }
     if (!password.trim() || password.length < 6) {
       setEmailError("Password must be at least 6 characters");
+      return;
+    }
+    if (emailMode === "signup" && !termsAccepted) {
+      setEmailError("Please accept the Terms and Privacy Policy to continue");
       return;
     }
     setIsEmailLoading(true);
@@ -74,6 +79,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
     setPassword("");
     setEmailError("");
     setShowPassword(false);
+    setTermsAccepted(false);
   };
 
   const roleLabel = selectedRole === "mechanic" ? "Mechanic" : "Customer";
@@ -226,6 +232,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                   onClick={() => {
                     setEmailMode("login");
                     setEmailError("");
+                    setTermsAccepted(false);
                   }}
                   className={`flex-1 h-10 rounded-xl font-semibold text-sm transition-all ${
                     emailMode === "login"
@@ -241,6 +248,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                   onClick={() => {
                     setEmailMode("signup");
                     setEmailError("");
+                    setTermsAccepted(false);
                   }}
                   className={`flex-1 h-10 rounded-xl font-semibold text-sm transition-all ${
                     emailMode === "signup"
@@ -329,12 +337,57 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                   </p>
                 )}
 
+                {/* Terms & Privacy (signup only) */}
+                {emailMode === "signup" && (
+                  <div className="flex flex-col gap-2">
+                    <label
+                      data-ocid="login.terms.checkbox"
+                      className="flex items-start gap-3 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-border accent-primary cursor-pointer flex-shrink-0"
+                      />
+                      <span className="text-xs text-muted-foreground leading-relaxed">
+                        I agree to the{" "}
+                        <a
+                          href="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline font-medium"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Terms of Service
+                        </a>{" "}
+                        and{" "}
+                        <a
+                          href="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline font-medium"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Privacy Policy
+                        </a>
+                      </span>
+                    </label>
+                    <p className="text-xs text-muted-foreground/70 leading-relaxed pl-7">
+                      By continuing, you acknowledge that TRIPLE A is a platform
+                      connecting users with independent mechanics.
+                    </p>
+                  </div>
+                )}
+
                 {/* Submit */}
                 <button
                   type="button"
                   data-ocid="login.email.submit_button"
                   onClick={() => void handleEmailSubmit()}
-                  disabled={isEmailLoading}
+                  disabled={
+                    isEmailLoading || (emailMode === "signup" && !termsAccepted)
+                  }
                   className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70 mt-2"
                 >
                   {isEmailLoading ? (

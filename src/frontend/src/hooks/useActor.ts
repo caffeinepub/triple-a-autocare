@@ -1,31 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { backendInterface } from "../backend";
 import { createActorWithConfig } from "../config";
-import {
-  getEmailIdentity,
-  subscribeEmailIdentity,
-} from "../utils/emailIdentityStore";
 import { getSecretParameter } from "../utils/urlParams";
 import { useInternetIdentity } from "./useInternetIdentity";
 
 const ACTOR_QUERY_KEY = "actor";
 export function useActor() {
-  const { identity: iiIdentity } = useInternetIdentity();
-  // Track email identity reactively so actor rebuilds when email login occurs
-  const [emailIdentity, setEmailIdentityState] = useState(getEmailIdentity);
+  const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    return subscribeEmailIdentity(setEmailIdentityState);
-  }, []);
-
-  // Email identity takes priority over II identity when present and non-anonymous
-  const identity =
-    emailIdentity && !emailIdentity.getPrincipal().isAnonymous()
-      ? emailIdentity
-      : iiIdentity;
-
   const actorQuery = useQuery<backendInterface>({
     queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
     queryFn: async () => {
