@@ -287,6 +287,11 @@ export const idlFactory = ({ IDL }) => {
     'location' : IDL.Text,
     'cancelledBy' : IDL.Opt(IDL.Text),
     'cancelReason' : IDL.Opt(IDL.Text),
+    'latitude' : IDL.Opt(IDL.Float64),
+    'longitude' : IDL.Opt(IDL.Float64),
+    'address' : IDL.Opt(IDL.Text),
+    'customerRating' : IDL.Opt(IDL.Nat),
+    'mechanicRating' : IDL.Opt(IDL.Nat),
   });
   const Review = IDL.Record({
     'id' : IDL.Text,
@@ -296,7 +301,16 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : Time,
     'rating' : IDL.Nat,
   });
-  
+  const ChatMessage = IDL.Record({
+    'id' : IDL.Text,
+    'requestId' : IDL.Text,
+    'senderId' : IDL.Principal,
+    'senderRole' : IDL.Text,
+    'message' : IDL.Text,
+    'isRead' : IDL.Bool,
+    'createdAt' : Time,
+  });
+
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'acceptServiceRequest' : IDL.Func([IDL.Text, IDL.Text], [], []),
@@ -363,7 +377,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'submitRating' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
-  'updateServiceRequest' : IDL.Func(
+    'updateServiceRequest' : IDL.Func(
         [
           IDL.Text,
           IDL.Nat,

@@ -619,10 +619,16 @@ export function useSubmitRating() {
       );
     },
     onSuccess: () => {
+      // Invalidate first, then immediately refetch so rating shows without
+      // waiting for the next background poll cycle
       queryClient.invalidateQueries({
         queryKey: ["customerCompletedRequests"],
       });
       queryClient.invalidateQueries({ queryKey: ["mechanicCompletedJobs"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.refetchQueries({ queryKey: ["customerCompletedRequests"] });
+      queryClient.refetchQueries({ queryKey: ["mechanicCompletedJobs"] });
+      queryClient.refetchQueries({ queryKey: ["profile"] });
     },
   });
 }

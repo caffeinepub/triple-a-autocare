@@ -1,32 +1,52 @@
 # Triple A AutoCare
 
 ## Current State
-- Chat header shows other party's name as plain text, no profile image
-- MechanicJobsTab (ActiveJobCard) shows customer initials in a yellow circle, no profile image fetch, no rating
-- BookingsTab (MechanicInfoRow) fetches mechanic profile and shows image/initials, name, experience — but no rating
-- No `useGetUserProfile` hook for fetching arbitrary user profiles by principal
+
+Full-featured on-demand mechanic platform for Nigerian car owners. The app is fully implemented with:
+- Real-time two-sided service request system (customer ↔ mechanic)
+- Role-based onboarding (customer / mechanic) with email/password and Internet Identity auth
+- Complete profile system with profile images, years of experience, specialties, location
+- Real-time chat with unread message badges and notification sounds
+- Cancellation system with reasons and attribution
+- History system (active and completed/cancelled tabs)
+- Pricing & approval workflow (mechanic submits price, customer accepts/rejects)
+- Rating system (1–5 stars post-completion, mutual ratings)
+- Car parts marketplace (NGN pricing)
+- Premium black/white/yellow mobile-first UI
+
+The backend (main.mo) is fully implemented with all V1–V4 migration logic, all service request status variants, chat, ratings, profiles, and cancellations.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `useGetUserProfile(userId: string | undefined)` hook using `actor.getUserProfile(Principal)`
-- Profile avatar component (inline) for reuse: shows image if available, else first-letter circle
-- Chat header: profile image + name of the other party
-- Mechanic job cards: customer profile image fetched via `useGetUserProfile(customerId)`, shown with name and rating if available
-- Mechanic info row (bookings): add average/per-request rating display from Mechanic list data
+- Nothing new to add — this is a full rebuild/redeploy of the existing app
 
 ### Modify
-- `ChatScreen` props: add `otherPartyId` (optional) so header can fetch and display profile image
-- `ActiveJobCard` in MechanicJobsTab: replace static initials circle with dynamic customer profile image (fetch by `job.customerId`)
-- `MechanicInfoRow` in BookingsTab: add rating display using `useMechanics` data or mechanic profile
-- `App.tsx` / callers: pass `otherPartyId` when opening chat
+- Fix rating submission bug: `customerRating` and `mechanicRating` must be correctly deserialized from backend responses in `ServiceRequest` IDL
+- Ensure the `idlFactory` function in `backend.did.js` includes `latitude`, `longitude`, `address`, `customerRating`, `mechanicRating` fields in `ServiceRequest`
+- Ensure `ChatMessage` with `isRead` field is fully included in both `idlService` and `idlFactory`
+- Rebuild frontend ensuring all existing pages/features are intact and working
 
 ### Remove
-- Nothing removed
+- Nothing to remove
 
 ## Implementation Plan
-1. Add `useGetUserProfile` hook to `useQueries.ts`
-2. Update `ChatScreen.tsx`: add `otherPartyId` prop, fetch profile, show avatar + name in header
-3. Update `MechanicJobsTab.tsx` (`ActiveJobCard`): fetch customer profile via `useGetUserProfile`, show image or initial fallback + rating
-4. Update `BookingsTab.tsx` (`MechanicInfoRow`): add rating display (use `useMechanics` to get rating by mechanicId)
-5. Update `App.tsx` to pass `otherPartyId` when opening chat
+
+1. **Generate fresh Motoko backend** with all features:
+   - UserProfile (V4): name, phone, location, latitude, longitude, address, profileImage, role, yearsOfExperience, specialties, totalRatings, ratingsSum
+   - ServiceRequest (V5): all status variants (searching, accepted, on_the_way, arrived, price_sent, approved, completed, cancelled), all fields including customerRating, mechanicRating, cancelledBy, cancelReason, latitude, longitude, address
+   - ChatMessage: id, requestId, senderId, senderRole, message, isRead, createdAt
+   - All backend methods: createServiceRequest, getSearchingRequests, acceptServiceRequest, getServiceRequests, getMechanicActiveJob, getCustomerActiveRequest, updateServiceRequestStatus, submitServicePrice, customerRespondToPrice, completeJob, cancelServiceRequest, getMechanicCompletedJobs, getCustomerCompletedRequests, sendMessage, getMessages, markMessagesRead, submitRating, updateUserProfile, getCurrentUserProfile/getCallerUserProfile, getMechanicPublicProfile, saveCallerUserAppRole, seedData
+
+2. **Rebuild frontend** using existing pages/components as the source:
+   - App.tsx: two-step auth (role selection → login), email/II identity, onboarding, routing
+   - BookingsTab: active requests with mechanic info, price accept/reject, cancel, history, ratings
+   - MechanicJobsTab: active jobs with status updates, price submission, chat, cancel, history, ratings
+   - MechanicDashboard: incoming request cards with customer ratings
+   - ChatScreen: real-time chat with proper message alignment, keyboard handling, unread badges
+   - ProfileTab: photo upload, mechanic fields, rating display
+   - OnboardingScreen: name, phone, address/location with GPS option
+   - LoginScreen: Google (II) and email/password options after role selection
+   - BottomNav: role-specific tabs with unread badge support
+   - Sounds utility: Web Audio API notification sounds
+   - Email identity store: persisted email auth across reloads
