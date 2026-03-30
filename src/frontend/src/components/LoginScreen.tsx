@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { deriveIdentityFromCredentials } from "../utils/emailAuth";
 import { setEmailIdentity } from "../utils/emailIdentityStore";
+import MechanicPartnerAgreementModal from "./MechanicPartnerAgreementModal";
 import PrivacyPolicyScreen from "./PrivacyPolicyScreen";
 import TermsOfServiceScreen from "./TermsOfServiceScreen";
 
@@ -40,6 +41,9 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [mechanicAgreementAccepted, setMechanicAgreementAccepted] =
+    useState(false);
+  const [showMechanicAgreement, setShowMechanicAgreement] = useState(false);
 
   const handleGoogleLogin = () => {
     sessionStorage.setItem("pending-role", selectedRole);
@@ -58,6 +62,14 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
     }
     if (emailMode === "signup" && !termsAccepted) {
       setEmailError("Please accept the Terms and Privacy Policy to continue");
+      return;
+    }
+    if (
+      emailMode === "signup" &&
+      selectedRole === "mechanic" &&
+      !mechanicAgreementAccepted
+    ) {
+      setEmailError("Please accept the Mechanic Partner Agreement to continue");
       return;
     }
     setIsEmailLoading(true);
@@ -84,6 +96,8 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
     setEmailError("");
     setShowPassword(false);
     setTermsAccepted(false);
+    setMechanicAgreementAccepted(false);
+    setShowMechanicAgreement(false);
   };
 
   const roleLabel = selectedRole === "mechanic" ? "Mechanic" : "Customer";
@@ -101,6 +115,15 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
       <AnimatePresence>
         {showPrivacy && (
           <PrivacyPolicyScreen onBack={() => setShowPrivacy(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Mechanic Partner Agreement modal */}
+      <AnimatePresence>
+        {showMechanicAgreement && (
+          <MechanicPartnerAgreementModal
+            onClose={() => setShowMechanicAgreement(false)}
+          />
         )}
       </AnimatePresence>
 
@@ -251,6 +274,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                     setEmailMode("login");
                     setEmailError("");
                     setTermsAccepted(false);
+                    setMechanicAgreementAccepted(false);
                   }}
                   className={`flex-1 h-10 rounded-xl font-semibold text-sm transition-all ${
                     emailMode === "login"
@@ -267,6 +291,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                     setEmailMode("signup");
                     setEmailError("");
                     setTermsAccepted(false);
+                    setMechanicAgreementAccepted(false);
                   }}
                   className={`flex-1 h-10 rounded-xl font-semibold text-sm transition-all ${
                     emailMode === "signup"
@@ -402,13 +427,54 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                   </div>
                 )}
 
+                {/* Mechanic Partner Agreement (mechanic signup only) */}
+                {emailMode === "signup" && selectedRole === "mechanic" && (
+                  <div className="flex flex-col gap-2">
+                    <label
+                      data-ocid="login.mechanic_agreement.checkbox"
+                      className="flex items-start gap-3 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={mechanicAgreementAccepted}
+                        onChange={(e) =>
+                          setMechanicAgreementAccepted(e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-border accent-primary cursor-pointer flex-shrink-0"
+                      />
+                      <span className="text-xs text-muted-foreground leading-relaxed">
+                        I agree to the{" "}
+                        <button
+                          type="button"
+                          data-ocid="login.mechanic_agreement.open_modal_button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMechanicAgreement(true);
+                          }}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          Mechanic Partner Agreement
+                        </button>
+                      </span>
+                    </label>
+                    <p className="text-xs text-muted-foreground/70 leading-relaxed pl-7">
+                      By continuing, you agree to the Mechanic Partner
+                      Agreement.
+                    </p>
+                  </div>
+                )}
+
                 {/* Submit */}
                 <button
                   type="button"
                   data-ocid="login.email.submit_button"
                   onClick={() => void handleEmailSubmit()}
                   disabled={
-                    isEmailLoading || (emailMode === "signup" && !termsAccepted)
+                    isEmailLoading ||
+                    (emailMode === "signup" && !termsAccepted) ||
+                    (emailMode === "signup" &&
+                      selectedRole === "mechanic" &&
+                      !mechanicAgreementAccepted)
                   }
                   className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70 mt-2"
                 >
