@@ -2,6 +2,7 @@ import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   useGetMessages,
+  useGetUserProfile,
   useMarkMessagesRead,
   useSendMessage,
 } from "../hooks/useQueries";
@@ -9,6 +10,7 @@ import {
 interface ChatScreenProps {
   requestId: string;
   otherPartyName: string;
+  otherPartyId?: string;
   userRole: "customer" | "mechanic";
   currentUserId: string;
   onBack: () => void;
@@ -17,11 +19,13 @@ interface ChatScreenProps {
 export default function ChatScreen({
   requestId,
   otherPartyName,
+  otherPartyId,
   userRole,
   currentUserId,
   onBack,
 }: ChatScreenProps) {
   const { data: messages, isLoading } = useGetMessages(requestId);
+  const { data: otherProfile } = useGetUserProfile(otherPartyId);
   const sendMessage = useSendMessage();
   const markRead = useMarkMessagesRead();
   const [input, setInput] = useState("");
@@ -107,9 +111,21 @@ export default function ChatScreen({
         >
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
+        {otherProfile?.profileImage ? (
+          <img
+            src={otherProfile.profileImage}
+            alt={otherPartyName}
+            className="w-10 h-10 rounded-full object-cover shrink-0 border border-primary/30"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+            <span className="text-primary font-bold text-sm">
+              {otherPartyName.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
         <div className="flex flex-col">
           <p className="font-bold text-foreground text-base leading-tight">
-            {userRole === "customer" ? "Mechanic" : "Customer"}:{" "}
             {otherPartyName}
           </p>
           <p className="text-muted-foreground text-xs">Service Chat</p>

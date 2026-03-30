@@ -259,6 +259,20 @@ export function useGetMechanicProfile(mechanicId: string | undefined) {
   });
 }
 
+export function useGetUserProfile(userId: string | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<UserProfile | null>({
+    queryKey: ["userProfile", userId],
+    queryFn: async () => {
+      if (!actor || !userId) return null;
+      const { Principal } = await import("@icp-sdk/core/principal");
+      return actor.getMechanicPublicProfile(Principal.fromText(userId));
+    },
+    enabled: !!actor && !isFetching && !!userId,
+    staleTime: 30000,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Service Request hooks
 // ---------------------------------------------------------------------------

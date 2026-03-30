@@ -111,7 +111,8 @@ const MECHANIC_VISIBLE_STATUSES = new Set([
 function MechanicInfoRow({
   mechanicId,
   mechanicName,
-}: { mechanicId: string; mechanicName: string }) {
+  mechanicRating,
+}: { mechanicId: string; mechanicName: string; mechanicRating?: number }) {
   const { data: mechanicProfile } = useGetMechanicProfile(mechanicId);
 
   const initials = mechanicName
@@ -157,6 +158,14 @@ function MechanicInfoRow({
             Specializes in {specs}
           </span>
         )}
+        {mechanicRating != null && mechanicRating > 0 && (
+          <div className="flex items-center gap-1">
+            <span className="text-yellow-400 text-xs">⭐</span>
+            <span className="text-muted-foreground text-xs">
+              {mechanicRating.toFixed(1)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -168,7 +177,7 @@ function ActiveRequestCard({
   currentUserId,
 }: {
   request: ExtendedServiceRequest;
-  onOpenChat: (id: string, name: string) => void;
+  onOpenChat: (id: string, name: string, partyId?: string) => void;
   currentUserId: string;
 }) {
   const respondToPrice = useCustomerRespondToPrice();
@@ -227,6 +236,10 @@ function ActiveRequestCard({
   };
 
   const mechanicIdStr = request.mechanicId?.toString();
+  const { data: mechanics } = useMechanics();
+  const mechanicData = mechanics?.find((m) => m.id === mechanicIdStr);
+  const mechanicRating =
+    typeof mechanicData?.rating === "number" ? mechanicData.rating : undefined;
   const isAccepted = request.status === "accepted";
 
   return (
@@ -307,6 +320,7 @@ function ActiveRequestCard({
             <MechanicInfoRow
               mechanicId={mechanicIdStr}
               mechanicName={request.mechanicName}
+              mechanicRating={mechanicRating}
             />
           )}
 
@@ -316,7 +330,11 @@ function ActiveRequestCard({
             type="button"
             data-ocid="bookings.chat.button"
             onClick={() =>
-              onOpenChat(request.id, request.mechanicName ?? "Mechanic")
+              onOpenChat(
+                request.id,
+                request.mechanicName ?? "Mechanic",
+                mechanicIdStr,
+              )
             }
             className="w-full py-3 rounded-2xl border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform relative"
           >
@@ -655,7 +673,9 @@ function BookingCard({
 
 export default function BookingsTab({
   onOpenChat,
-}: { onOpenChat?: (requestId: string, name: string) => void }) {
+}: {
+  onOpenChat?: (requestId: string, name: string, otherPartyId?: string) => void;
+}) {
   const { identity: iiIdentity } = useInternetIdentity();
   const emailIdentity = getEmailIdentity();
   const identity = emailIdentity ?? iiIdentity;

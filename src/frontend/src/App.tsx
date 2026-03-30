@@ -41,6 +41,7 @@ const SEED_KEY = "triple-a-seeded-v1";
 interface ChatState {
   requestId: string;
   otherPartyName: string;
+  otherPartyId?: string;
   userRole: "customer" | "mechanic";
 }
 
@@ -260,10 +261,11 @@ function AppContent() {
               {customerTab === "home" && <HomeTab profile={profile} />}
               {customerTab === "bookings" && (
                 <BookingsTab
-                  onOpenChat={(requestId, otherPartyName) =>
+                  onOpenChat={(requestId, otherPartyName, otherPartyId) =>
                     handleOpenChat({
                       requestId,
                       otherPartyName,
+                      otherPartyId,
                       userRole: "customer",
                     })
                   }
@@ -287,10 +289,11 @@ function AppContent() {
               {mechanicTab === "jobs" && (
                 <MechanicJobsTab
                   profile={profile}
-                  onOpenChat={(requestId, otherPartyName) =>
+                  onOpenChat={(requestId, otherPartyName, otherPartyId) =>
                     handleOpenChat({
                       requestId,
                       otherPartyName,
+                      otherPartyId,
                       userRole: "mechanic",
                     })
                   }
@@ -314,6 +317,7 @@ function AppContent() {
             <ChatScreen
               requestId={chatState.requestId}
               otherPartyName={chatState.otherPartyName}
+              otherPartyId={chatState.otherPartyId}
               userRole={chatState.userRole}
               currentUserId={principal}
               onBack={handleCloseChat}

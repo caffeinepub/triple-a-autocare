@@ -20,6 +20,7 @@ import {
   useCompleteJob,
   useGetMessages,
   useGetServiceRequests,
+  useGetUserProfile,
   useMechanicCompletedJobs,
   useSubmitRating,
   useUpdateServiceRequest,
@@ -46,14 +47,6 @@ const CANCEL_ACTIVE_STATUSES = new Set([
 ]);
 
 const CANCEL_REASONS = ["Too far", "Busy", "Issue unclear"];
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("");
-}
 
 function statusLabel(status: string) {
   switch (status) {
@@ -185,7 +178,7 @@ function ActiveJobCard({
   currentUserId,
 }: {
   job: ExtendedServiceRequest;
-  onOpenChat: (id: string, name: string) => void;
+  onOpenChat: (id: string, name: string, partyId?: string) => void;
   currentUserId: string;
 }) {
   const updateStatus = useUpdateServiceRequestStatus();
@@ -193,6 +186,8 @@ function ActiveJobCard({
   const completeJob = useCompleteJob();
   const cancelJob = useCancelServiceRequest();
   const { data: chatMessages } = useGetMessages(job.id);
+  const customerIdStr = job.customerId?.toString();
+  const { data: customerProfile } = useGetUserProfile(customerIdStr);
   const unreadCount = chatMessages
     ? countUnread(chatMessages, currentUserId)
     : 0;
@@ -302,11 +297,19 @@ function ActiveJobCard({
         className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-4"
       >
         <div className="flex items-start gap-3">
-          <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground font-bold text-sm">
-              {getInitials(job.customerName)}
-            </span>
-          </div>
+          {customerProfile?.profileImage ? (
+            <img
+              src={customerProfile.profileImage}
+              alt={job.customerName}
+              className="w-11 h-11 rounded-full object-cover shrink-0 border border-primary/30"
+            />
+          ) : (
+            <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <span className="text-primary-foreground font-bold text-sm">
+                {job.customerName.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <p className="font-bold text-foreground text-base leading-tight truncate">
@@ -349,7 +352,9 @@ function ActiveJobCard({
           <button
             type="button"
             data-ocid="jobs.chat.button"
-            onClick={() => onOpenChat(job.id, job.customerName ?? "Customer")}
+            onClick={() =>
+              onOpenChat(job.id, job.customerName ?? "Customer", customerIdStr)
+            }
             className="w-full py-3 rounded-2xl border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform relative"
           >
             <MessageCircle className="w-4 h-4" />
@@ -644,7 +649,7 @@ export default function MechanicJobsTab({
   onOpenChat,
 }: {
   profile?: UserProfile;
-  onOpenChat?: (requestId: string, name: string) => void;
+  onOpenChat?: (requestId: string, name: string, otherPartyId?: string) => void;
 }) {
   const { data: jobs, isLoading: jobsLoading } = useGetServiceRequests();
   const { data: historyJobs, isLoading: historyLoading } =
@@ -714,7 +719,7 @@ export default function MechanicJobsTab({
                 <ActiveJobCard
                   key={job.id}
                   job={job}
-                  onOpenChat={onOpenChat ?? ((_id, _name) => {})}
+                  onOpenChat={onOpenChat ?? ((_id, _name, _pid) => {})}
                   currentUserId={(() => {
                     const emailId = getEmailIdentity();
                     return (
