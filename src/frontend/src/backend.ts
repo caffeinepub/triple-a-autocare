@@ -902,6 +902,8 @@ function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uin
     latitude?: [] | [number];
     longitude?: [] | [number];
     address?: [] | [string];
+    customerRating?: [] | [bigint];
+    mechanicRating?: [] | [bigint];
 }): ServiceRequest {
     return {
         id: value.id,
@@ -919,7 +921,9 @@ function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uin
         cancelReason: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.cancelReason)),
         latitude: value.latitude != null ? record_opt_to_undefined(value.latitude.length === 0 ? null : value.latitude[0]) : undefined,
         longitude: value.longitude != null ? record_opt_to_undefined(value.longitude.length === 0 ? null : value.longitude[0]) : undefined,
-        address: value.address != null ? record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.address)) : undefined
+        address: value.address != null ? record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.address)) : undefined,
+        customerRating: value.customerRating != null ? record_opt_to_undefined(from_candid_opt_bigint(_uploadFile, _downloadFile, value.customerRating)) : undefined,
+        mechanicRating: value.mechanicRating != null ? record_opt_to_undefined(from_candid_opt_bigint(_uploadFile, _downloadFile, value.mechanicRating)) : undefined
     };
 }
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
