@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { deriveIdentityFromCredentials } from "../utils/emailAuth";
 import { setEmailIdentity } from "../utils/emailIdentityStore";
+import TermsOfServiceScreen from "./TermsOfServiceScreen";
 
 type View = "main" | "email";
 type EmailMode = "login" | "signup";
@@ -36,6 +37,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
   const [emailError, setEmailError] = useState("");
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const handleGoogleLogin = () => {
     sessionStorage.setItem("pending-role", selectedRole);
@@ -86,6 +88,13 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      {/* Terms of Service overlay */}
+      <AnimatePresence>
+        {showTerms && (
+          <TermsOfServiceScreen onBack={() => setShowTerms(false)} />
+        )}
+      </AnimatePresence>
+
       <div className="w-full max-w-[430px] flex flex-col items-center gap-8">
         <AnimatePresence mode="wait">
           {view === "main" ? (
@@ -352,15 +361,17 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                       />
                       <span className="text-xs text-muted-foreground leading-relaxed">
                         I agree to the{" "}
-                        <a
-                          href="/terms"
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
+                          data-ocid="login.terms.open_modal_button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowTerms(true);
+                          }}
                           className="text-primary hover:underline font-medium"
-                          onClick={(e) => e.stopPropagation()}
                         >
                           Terms of Service
-                        </a>{" "}
+                        </button>{" "}
                         and{" "}
                         <a
                           href="/privacy"
