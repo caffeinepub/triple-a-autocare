@@ -69,6 +69,8 @@ export interface UserProfile {
     role?: string;
     yearsOfExperience?: bigint;
     specialties?: string;
+    totalRatings: bigint;
+    ratingsSum: bigint;
 }
 export interface Review {
     id: string;

@@ -158,6 +158,8 @@ export interface UserProfile {
     role?: string;
     yearsOfExperience?: bigint;
     specialties?: string;
+    totalRatings: bigint;
+    ratingsSum: bigint;
 }
 export interface Review {
     id: string;
@@ -644,6 +646,8 @@ export class Backend implements backendInterface {
             role: arg0.role != null ? [arg0.role] : [],
             yearsOfExperience: arg0.yearsOfExperience != null ? [arg0.yearsOfExperience] : [],
             specialties: arg0.specialties != null ? [arg0.specialties] : [],
+            totalRatings: arg0.totalRatings ?? BigInt(0),
+            ratingsSum: arg0.ratingsSum ?? BigInt(0),
         };
         if (this.processError) {
             try {
@@ -870,6 +874,8 @@ function from_candid_UserProfile_record(_uploadFile: (file: ExternalBlob) => Pro
         role: (v as any).role != null && (v as any).role.length > 0 ? (v as any).role[0] : undefined,
         yearsOfExperience: (v as any).yearsOfExperience != null && (v as any).yearsOfExperience.length > 0 ? (v as any).yearsOfExperience[0] : undefined,
         specialties: (v as any).specialties != null && (v as any).specialties.length > 0 ? (v as any).specialties[0] : undefined,
+        totalRatings: (v as any).totalRatings ?? BigInt(0),
+        ratingsSum: (v as any).ratingsSum ?? BigInt(0),
     };
 }
 function from_candid_opt_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {

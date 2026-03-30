@@ -99,6 +99,8 @@ export interface UserProfile {
   'role' : [] | [string],
   'yearsOfExperience' : [] | [bigint],
   'specialties' : [] | [string],
+  'totalRatings' : bigint,
+  'ratingsSum' : bigint,
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |

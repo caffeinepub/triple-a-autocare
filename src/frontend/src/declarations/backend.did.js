@@ -60,6 +60,8 @@ export const UserProfile = IDL.Record({
   'role' : IDL.Opt(IDL.Text),
   'yearsOfExperience' : IDL.Opt(IDL.Nat),
   'specialties' : IDL.Opt(IDL.Text),
+  'totalRatings' : IDL.Nat,
+  'ratingsSum' : IDL.Nat,
 });
 export const ServiceRequest = IDL.Record({
   'id' : IDL.Text,
@@ -259,6 +261,8 @@ export const idlFactory = ({ IDL }) => {
     'role' : IDL.Opt(IDL.Text),
     'yearsOfExperience' : IDL.Opt(IDL.Nat),
     'specialties' : IDL.Opt(IDL.Text),
+    'totalRatings' : IDL.Nat,
+    'ratingsSum' : IDL.Nat,
   });
   const ServiceRequest = IDL.Record({
     'id' : IDL.Text,

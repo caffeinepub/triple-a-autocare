@@ -78,7 +78,22 @@ actor {
     address : ?Text;
   };
 
-  // V3 — current UserProfile with profile image, role, mechanic fields
+  // V3 — UserProfile with profile image, role, mechanic fields (kept for migration)
+  type UserProfileV3 = {
+    userId : Principal;
+    name : Text;
+    location : Text;
+    phone : Text;
+    latitude : ?Float;
+    longitude : ?Float;
+    address : ?Text;
+    profileImage : ?Text;
+    role : ?Text;
+    yearsOfExperience : ?Nat;
+    specialties : ?Text;
+  };
+
+  // V4 — current UserProfile with rating aggregates
   public type UserProfile = {
     userId : Principal;
     name : Text;
@@ -91,6 +106,8 @@ actor {
     role : ?Text;
     yearsOfExperience : ?Nat;
     specialties : ?Text;
+    totalRatings : Nat;
+    ratingsSum : Nat;
   };
 
   // V1 — original deployed type
@@ -235,8 +252,10 @@ actor {
   let userRoles = Map.empty<Principal, Text>();
   // V2 stable storage — kept for migration
   let userProfilesV2 = Map.empty<Principal, UserProfileV2>();
-  // V3 stable storage — current version with profileImage, role, mechanic fields
-  let userProfilesV3 = Map.empty<Principal, UserProfile>();
+  // V3 stable storage — kept for migration to V4
+  let userProfilesV3 = Map.empty<Principal, UserProfileV3>();
+  // V4 stable storage — current version with totalRatings, ratingsSum
+  let userProfilesV4 = Map.empty<Principal, UserProfile>();
 
   // V1 stable storage — kept for migration only
   let serviceRequests = Map.empty<Text, ServiceRequestV1>();
@@ -315,9 +334,9 @@ actor {
       };
     };
 
-    // Migrate UserProfile V1 → V3
+    // Migrate UserProfile V1 → V4
     for (p in userProfiles.values()) {
-      if (userProfilesV3.get(p.userId) == null) {
+      if (userProfilesV4.get(p.userId) == null) {
         let migrated : UserProfile = {
           userId = p.userId;
           name = p.name;
@@ -330,14 +349,16 @@ actor {
           role = null;
           yearsOfExperience = null;
           specialties = null;
+          totalRatings = 0;
+          ratingsSum = 0;
         };
-        userProfilesV3.add(p.userId, migrated);
+        userProfilesV4.add(p.userId, migrated);
       };
     };
 
-    // Migrate UserProfile V2 → V3
+    // Migrate UserProfile V2 → V4
     for (p in userProfilesV2.values()) {
-      if (userProfilesV3.get(p.userId) == null) {
+      if (userProfilesV4.get(p.userId) == null) {
         let migrated : UserProfile = {
           userId = p.userId;
           name = p.name;
@@ -350,8 +371,32 @@ actor {
           role = null;
           yearsOfExperience = null;
           specialties = null;
+          totalRatings = 0;
+          ratingsSum = 0;
         };
-        userProfilesV3.add(p.userId, migrated);
+        userProfilesV4.add(p.userId, migrated);
+      };
+    };
+
+    // Migrate UserProfile V3 → V4
+    for (p in userProfilesV3.values()) {
+      if (userProfilesV4.get(p.userId) == null) {
+        let migrated : UserProfile = {
+          userId = p.userId;
+          name = p.name;
+          location = p.location;
+          phone = p.phone;
+          latitude = p.latitude;
+          longitude = p.longitude;
+          address = p.address;
+          profileImage = p.profileImage;
+          role = p.role;
+          yearsOfExperience = p.yearsOfExperience;
+          specialties = p.specialties;
+          totalRatings = 0;
+          ratingsSum = 0;
+        };
+        userProfilesV4.add(p.userId, migrated);
       };
     };
 
@@ -426,13 +471,13 @@ actor {
 
   };
 
-  // Helper: get V3 profile for a user, with lazy migration from V2
+  // Helper: get V4 profile for a user, with lazy migration from older versions
   func getProfileV3(userId : Principal) : ?UserProfile {
-    switch (userProfilesV3.get(userId)) {
+    switch (userProfilesV4.get(userId)) {
       case (?p) { ?p };
       case (null) {
-        // lazy migrate from V2
-        switch (userProfilesV2.get(userId)) {
+        // lazy migrate from V3
+        switch (userProfilesV3.get(userId)) {
           case (?p) {
             let migrated : UserProfile = {
               userId = p.userId;
@@ -442,10 +487,12 @@ actor {
               latitude = p.latitude;
               longitude = p.longitude;
               address = p.address;
-              profileImage = null;
-              role = null;
-              yearsOfExperience = null;
-              specialties = null;
+              profileImage = p.profileImage;
+              role = p.role;
+              yearsOfExperience = p.yearsOfExperience;
+              specialties = p.specialties;
+              totalRatings = 0;
+              ratingsSum = 0;
             };
             ?migrated;
           };
@@ -589,11 +636,14 @@ actor {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
+    let existing = getProfileV3(caller);
     let updatedProfile : UserProfile = {
       profile with
       userId = caller;
+      totalRatings = switch (existing) { case (?p) { p.totalRatings }; case (null) { 0 } };
+      ratingsSum = switch (existing) { case (?p) { p.ratingsSum }; case (null) { 0 } };
     };
-    userProfilesV3.add(caller, updatedProfile);
+    userProfilesV4.add(caller, updatedProfile);
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
@@ -630,6 +680,8 @@ actor {
           role = null;
           yearsOfExperience = null;
           specialties = null;
+          totalRatings = 0;
+          ratingsSum = 0;
         }
       };
     };
@@ -661,9 +713,11 @@ actor {
       specialties = if (isMechanic) {
         switch (specialties) { case (?s) { ?s }; case (null) { existing.specialties } }
       } else { null };
+      totalRatings = existing.totalRatings;
+      ratingsSum = existing.ratingsSum;
     };
 
-    userProfilesV3.add(caller, updated);
+    userProfilesV4.add(caller, updated);
     updated;
   };
 
@@ -1296,23 +1350,84 @@ actor {
     };
 
     if (raterRole == "customer") {
+      // Customer is rating the mechanic → save to mechanicRating, update mechanic's stats
       if (request.customerId != caller) {
-        Runtime.trap("Unauthorized: Only the customer can submit a customer rating");
-      };
-      if (request.customerRating != null) {
-        Runtime.trap("You have already rated this job");
-      };
-      let updated = { request with customerRating = ?rating };
-      serviceRequestsV5.add(requestId, updated);
-    } else if (raterRole == "mechanic") {
-      if (request.mechanicId != ?caller) {
-        Runtime.trap("Unauthorized: Only the assigned mechanic can submit a mechanic rating");
+        Runtime.trap("Unauthorized: Only the customer can rate the mechanic");
       };
       if (request.mechanicRating != null) {
         Runtime.trap("You have already rated this job");
       };
       let updated = { request with mechanicRating = ?rating };
       serviceRequestsV5.add(requestId, updated);
+      // Update mechanic's totalRatings and ratingsSum
+      switch (request.mechanicId) {
+        case (?mechanicId) {
+          let mechanicProfile = switch (getProfileV3(mechanicId)) {
+            case (?p) { p };
+            case (null) {
+              {
+                userId = mechanicId;
+                name = "";
+                location = "";
+                phone = "";
+                latitude = null;
+                longitude = null;
+                address = null;
+                profileImage = null;
+                role = ?("mechanic");
+                yearsOfExperience = null;
+                specialties = null;
+                totalRatings = 0;
+                ratingsSum = 0;
+              }
+            };
+          };
+          let updatedMechanic = {
+            mechanicProfile with
+            totalRatings = mechanicProfile.totalRatings + 1;
+            ratingsSum = mechanicProfile.ratingsSum + rating;
+          };
+          userProfilesV4.add(mechanicId, updatedMechanic);
+        };
+        case (null) {};
+      };
+    } else if (raterRole == "mechanic") {
+      // Mechanic is rating the customer → save to customerRating, update customer's stats
+      if (request.mechanicId != ?caller) {
+        Runtime.trap("Unauthorized: Only the assigned mechanic can rate the customer");
+      };
+      if (request.customerRating != null) {
+        Runtime.trap("You have already rated this job");
+      };
+      let updated = { request with customerRating = ?rating };
+      serviceRequestsV5.add(requestId, updated);
+      // Update customer's totalRatings and ratingsSum
+      let customerProfile = switch (getProfileV3(request.customerId)) {
+        case (?p) { p };
+        case (null) {
+          {
+            userId = request.customerId;
+            name = "";
+            location = "";
+            phone = "";
+            latitude = null;
+            longitude = null;
+            address = null;
+            profileImage = null;
+            role = ?("customer");
+            yearsOfExperience = null;
+            specialties = null;
+            totalRatings = 0;
+            ratingsSum = 0;
+          }
+        };
+      };
+      let updatedCustomer = {
+        customerProfile with
+        totalRatings = customerProfile.totalRatings + 1;
+        ratingsSum = customerProfile.ratingsSum + rating;
+      };
+      userProfilesV4.add(request.customerId, updatedCustomer);
     } else {
       Runtime.trap("Invalid raterRole — must be 'customer' or 'mechanic'");
     };

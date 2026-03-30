@@ -61,8 +61,14 @@ export default function ProfileTab({ profile }: Props) {
   const { data: mechanicHistory } = useMechanicCompletedJobs();
   const isMechanic = userAppRole === "mechanic";
 
-  // Compute rating stats
+  // Compute rating stats — use totalRatings/ratingsSum from profile if available
   const ratingData = (() => {
+    const total = Number(profile.totalRatings ?? 0);
+    const sum = Number(profile.ratingsSum ?? 0);
+    if (total > 0) {
+      return { avg: Math.round((sum / total) * 10) / 10, total };
+    }
+    // Fallback: compute from history
     if (isMechanic) {
       const completed = (mechanicHistory ?? []).filter(
         (r) => r.status === "completed" && r.mechanicRating != null,

@@ -542,7 +542,7 @@ function HistoryCard({
 
       {isCompleted && (
         <div className="mt-2 border-t border-border/50 pt-2">
-          {request.customerRating == null ? (
+          {request.mechanicRating == null ? (
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-medium text-muted-foreground">
                 Rate Mechanic
@@ -596,8 +596,8 @@ function HistoryCard({
             </div>
           ) : (
             <p className="text-xs text-yellow-400 font-medium">
-              You rated: {"★".repeat(Number(request.customerRating))}
-              {"☆".repeat(5 - Number(request.customerRating))}
+              You rated: {"★".repeat(Number(request.mechanicRating))}
+              {"☆".repeat(5 - Number(request.mechanicRating))}
             </p>
           )}
         </div>

@@ -580,7 +580,7 @@ function JobHistoryCard({
 
       {isCompleted && (
         <div className="mt-2 border-t border-border/50 pt-2">
-          {job.mechanicRating == null ? (
+          {job.customerRating == null ? (
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-medium text-muted-foreground">
                 Rate Customer
@@ -634,8 +634,8 @@ function JobHistoryCard({
             </div>
           ) : (
             <p className="text-xs text-yellow-400 font-medium">
-              You rated: {"★".repeat(Number(job.mechanicRating))}
-              {"☆".repeat(5 - Number(job.mechanicRating))}
+              You rated: {"★".repeat(Number(job.customerRating))}
+              {"☆".repeat(5 - Number(job.customerRating))}
             </p>
           )}
         </div>

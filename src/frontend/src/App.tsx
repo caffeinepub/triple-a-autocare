@@ -139,6 +139,8 @@ function AppContent() {
       latitude: data.latitude,
       longitude: data.longitude,
       address: data.address,
+      totalRatings: BigInt(0),
+      ratingsSum: BigInt(0),
     };
     await saveProfileMutation.mutateAsync(profileData);
     queryClient.setQueryData(["profile"], profileData);
@@ -216,6 +218,8 @@ function AppContent() {
             longitude: data.longitude,
             address: data.address,
             role: pendingRole ?? undefined,
+            totalRatings: BigInt(0),
+            ratingsSum: BigInt(0),
           };
           await saveProfileMutation.mutateAsync(profileData);
           queryClient.setQueryData(["profile"], profileData);
