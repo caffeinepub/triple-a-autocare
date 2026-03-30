@@ -204,11 +204,14 @@ function AppContent() {
         role={selectedRole}
         onComplete={async (data) => {
           if (!actor || !identity) return;
-          // Capture pending role BEFORE removing it from sessionStorage
           const pendingRole = sessionStorage.getItem("pending-role") as
             | "customer"
             | "mechanic"
             | null;
+          // Fallback to the React state value if sessionStorage was cleared
+          const effectiveRole: "customer" | "mechanic" =
+            pendingRole ?? selectedRole;
+
           const profileData: UserProfile = {
             userId: identity.getPrincipal() as unknown as Principal,
             name: data.name,
@@ -217,18 +220,28 @@ function AppContent() {
             latitude: data.latitude,
             longitude: data.longitude,
             address: data.address,
-            role: pendingRole ?? undefined,
+            role: effectiveRole,
             totalRatings: BigInt(0),
             ratingsSum: BigInt(0),
           };
-          await saveProfileMutation.mutateAsync(profileData);
-          queryClient.setQueryData(["profile"], profileData);
 
+          // 1. Save profile to backend
+          await saveProfileMutation.mutateAsync(profileData);
+
+          // 2. Save role FIRST (localStorage + backend + queryData) so the
+          //    !userAppRole fallback branch won't fire on the next re-render
+          await saveRoleMutation.mutateAsync(effectiveRole);
+          queryClient.setQueryData(["userAppRole", principal], effectiveRole);
+
+          // 3. Clean up sessionStorage
           if (pendingRole) {
             sessionStorage.removeItem("pending-role");
-            await saveRoleMutation.mutateAsync(pendingRole);
-            queryClient.setQueryData(["userAppRole", principal], pendingRole);
           }
+
+          // 4. NOW update profile queryData — triggers the final re-render to
+          //    dashboard. Both profile and userAppRole are ready so the app
+          //    goes straight to the dashboard without hitting the !userAppRole branch.
+          queryClient.setQueryData(["profile"], profileData);
         }}
         isSaving={saveProfileMutation.isPending}
       />

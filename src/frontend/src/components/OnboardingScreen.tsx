@@ -20,13 +20,14 @@ export default function OnboardingScreen({
   onComplete,
   isSaving,
 }: Props) {
-  const [name, setName] = useState("Paul");
-  const [phone, setPhone] = useState("+234 ");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState("");
+  const [error, setError] = useState("");
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -61,6 +62,21 @@ export default function OnboardingScreen({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    if (!name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+    if (phone.trim().length < 5) {
+      setError("Please enter a valid phone number");
+      return;
+    }
+    if (!address.trim()) {
+      setError("Please enter your address");
+      return;
+    }
+
     await onComplete({
       name,
       phone,
@@ -108,7 +124,6 @@ export default function OnboardingScreen({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your name"
                 className="w-full h-14 bg-card border border-border rounded-2xl pl-11 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                required
               />
             </div>
           </div>
@@ -130,7 +145,6 @@ export default function OnboardingScreen({
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+234 800 000 0000"
                 className="w-full h-14 bg-card border border-border rounded-2xl pl-11 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                required
               />
             </div>
           </div>
@@ -157,7 +171,6 @@ export default function OnboardingScreen({
                 }}
                 placeholder="Enter your address"
                 className="w-full h-14 bg-card border border-border rounded-2xl pl-11 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                required
               />
             </div>
             <button
@@ -176,6 +189,12 @@ export default function OnboardingScreen({
             </button>
             {geoError && <p className="text-xs text-destructive">{geoError}</p>}
           </div>
+
+          {error && (
+            <p className="text-sm text-destructive font-medium text-center">
+              {error}
+            </p>
+          )}
 
           <button
             data-ocid="onboarding.submit_button"
