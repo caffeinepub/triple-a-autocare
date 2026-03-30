@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { deriveIdentityFromCredentials } from "../utils/emailAuth";
 import { setEmailIdentity } from "../utils/emailIdentityStore";
+import PrivacyPolicyScreen from "./PrivacyPolicyScreen";
 import TermsOfServiceScreen from "./TermsOfServiceScreen";
 
 type View = "main" | "email";
@@ -38,6 +39,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const handleGoogleLogin = () => {
     sessionStorage.setItem("pending-role", selectedRole);
@@ -92,6 +94,13 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
       <AnimatePresence>
         {showTerms && (
           <TermsOfServiceScreen onBack={() => setShowTerms(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Privacy Policy overlay */}
+      <AnimatePresence>
+        {showPrivacy && (
+          <PrivacyPolicyScreen onBack={() => setShowPrivacy(false)} />
         )}
       </AnimatePresence>
 
@@ -373,15 +382,17 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                           Terms of Service
                         </button>{" "}
                         and{" "}
-                        <a
-                          href="/privacy"
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
+                          data-ocid="login.privacy.open_modal_button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPrivacy(true);
+                          }}
                           className="text-primary hover:underline font-medium"
-                          onClick={(e) => e.stopPropagation()}
                         >
                           Privacy Policy
-                        </a>
+                        </button>
                       </span>
                     </label>
                     <p className="text-xs text-muted-foreground/70 leading-relaxed pl-7">
