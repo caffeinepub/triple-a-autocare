@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import type { Identity } from "@icp-sdk/core/agent";
 import type { Principal } from "@icp-sdk/core/principal";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { UserProfile } from "./backend";
 import {
   CustomerBottomNav,
@@ -17,7 +17,9 @@ import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
   countUnread,
+  useCustomerActiveRequest,
   useGetMessages,
+  useGetServiceRequests,
   useSaveProfile,
   useSaveUserAppRole,
   useUserAppRole,
@@ -37,6 +39,8 @@ import {
 } from "./utils/emailIdentityStore";
 
 const SEED_KEY = "triple-a-seeded-v1";
+// Statuses where chat is available — used for proactive unread tracking
+const CHAT_ACTIVE_STATUSES = ["accepted", "on_the_way", "arrived"];
 
 interface ChatState {
   requestId: string;
@@ -70,6 +74,8 @@ function AppContent() {
   const [selectedRole, setSelectedRole] = useState<"customer" | "mechanic">(
     "customer",
   );
+  // Track whether we're in the process of saving a pending role from sessionStorage
+  const [isHandlingPendingRole, setIsHandlingPendingRole] = useState(false);
 
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
@@ -80,13 +86,58 @@ function AppContent() {
 
   const principal = identity?.getPrincipal().toString() ?? "";
 
-  // Unread chat badge tracking
-  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
-  const { data: activeMessages } = useGetMessages(activeRequestId);
+  // Proactive unread chat tracking — poll messages for the current active
+  // request even before the user opens chat, so the nav badge stays accurate.
+  const { data: customerActiveReq } = useCustomerActiveRequest();
+  const { data: mechanicActiveJobs } = useGetServiceRequests();
+  const proactiveRequestId =
+    userAppRole === "customer"
+      ? (customerActiveReq?.id ?? null)
+      : ((mechanicActiveJobs ?? []).find((j) =>
+          CHAT_ACTIVE_STATUSES.includes(j.status as string),
+        )?.id ?? null);
+  const messageTrackingId = chatState?.requestId ?? proactiveRequestId;
+  const { data: activeMessages } = useGetMessages(messageTrackingId);
+  // Only show badge when chat panel is closed
   const unreadChat =
-    activeRequestId && activeMessages
+    messageTrackingId && activeMessages && !chatState
       ? countUnread(activeMessages, principal)
       : 0;
+
+  // Use a stable ref to saveRoleMutation.mutate to avoid stale-closure issues
+  // in the pending-role useEffect below.
+  const saveRoleMutateRef = useRef(saveRoleMutation.mutate);
+  useEffect(() => {
+    saveRoleMutateRef.current = saveRoleMutation.mutate;
+  });
+
+  // Bug fix: handle pending-role from sessionStorage in a useEffect instead
+  // of calling the async mutation during the render phase (React anti-pattern).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: saveRoleMutateRef is stable ref
+  useEffect(() => {
+    if (
+      !userAppRole &&
+      !roleLoading &&
+      isAuthenticated &&
+      !isHandlingPendingRole
+    ) {
+      const pendingRole = sessionStorage.getItem("pending-role") as
+        | "customer"
+        | "mechanic"
+        | null;
+      if (pendingRole) {
+        setIsHandlingPendingRole(true);
+        sessionStorage.removeItem("pending-role");
+        saveRoleMutateRef.current(pendingRole, {
+          onSuccess: () => {
+            if (pendingRole === "mechanic") setMechanicTab("dashboard");
+            else setCustomerTab("home");
+          },
+          onSettled: () => setIsHandlingPendingRole(false),
+        });
+      }
+    }
+  }, [userAppRole, roleLoading, isAuthenticated, isHandlingPendingRole]);
 
   useEffect(() => {
     if (!actor || !isAuthenticated) return;
@@ -111,10 +162,7 @@ function AppContent() {
     }
   }, [userAppRole]);
 
-  // Unread badge is computed reactively from activeMessages via useGetMessages
-
   const handleOpenChat = (state: ChatState) => {
-    setActiveRequestId(state.requestId);
     setChatState(state);
   };
 
@@ -249,16 +297,18 @@ function AppContent() {
   }
 
   if (!userAppRole) {
-    // Fallback: check pending-role from session (existing users re-logging in
-    // via a role button but who already have a profile)
-    const pendingRole = sessionStorage.getItem("pending-role") as
-      | "customer"
-      | "mechanic"
-      | null;
-    if (pendingRole) {
-      sessionStorage.removeItem("pending-role");
-      handleSaveRole(pendingRole);
-      return null;
+    // Show spinner while the pending-role useEffect is running
+    if (isHandlingPendingRole || !!sessionStorage.getItem("pending-role")) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-background">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            <p className="text-muted-foreground text-sm">
+              Loading your account...
+            </p>
+          </div>
+        </div>
+      );
     }
 
     return (
@@ -279,6 +329,7 @@ function AppContent() {
               {customerTab === "home" && <HomeTab profile={profile} />}
               {customerTab === "bookings" && (
                 <BookingsTab
+                  profile={profile}
                   onOpenChat={(requestId, otherPartyName, otherPartyId) =>
                     handleOpenChat({
                       requestId,

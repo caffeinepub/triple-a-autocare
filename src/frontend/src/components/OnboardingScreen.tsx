@@ -77,14 +77,24 @@ export default function OnboardingScreen({
       return;
     }
 
-    await onComplete({
-      name,
-      phone,
-      location: address,
-      latitude,
-      longitude,
-      address,
-    });
+    // Bug fix: wrap onComplete in try/catch so errors surface in the UI
+    // instead of leaving the button stuck in a loading state.
+    try {
+      await onComplete({
+        name,
+        phone,
+        location: address,
+        latitude,
+        longitude,
+        address,
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    }
   };
 
   const locationLabel =

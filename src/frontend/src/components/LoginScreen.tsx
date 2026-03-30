@@ -179,6 +179,81 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                 </p>
               </motion.div>
 
+              {/* Legal agreement checkboxes (required before any sign-in method) */}
+              <motion.div
+                className="w-full flex flex-col gap-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+              >
+                <label
+                  data-ocid="login.terms.main_checkbox"
+                  className="flex items-start gap-3 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-border accent-primary cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-xs text-muted-foreground leading-relaxed">
+                    I agree to the{" "}
+                    <button
+                      type="button"
+                      data-ocid="login.terms.main_open_button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTerms(true);
+                      }}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Terms of Service
+                    </button>{" "}
+                    and{" "}
+                    <button
+                      type="button"
+                      data-ocid="login.privacy.main_open_button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPrivacy(true);
+                      }}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Privacy Policy
+                    </button>
+                  </span>
+                </label>
+                {selectedRole === "mechanic" && (
+                  <label
+                    data-ocid="login.mechanic_agreement.main_checkbox"
+                    className="flex items-start gap-3 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={acceptMechanicAgreement}
+                      onChange={(e) =>
+                        setAcceptMechanicAgreement(e.target.checked)
+                      }
+                      className="mt-0.5 h-4 w-4 rounded border-border accent-primary cursor-pointer flex-shrink-0"
+                    />
+                    <span className="text-xs text-muted-foreground leading-relaxed">
+                      I agree to the{" "}
+                      <button
+                        type="button"
+                        data-ocid="login.mechanic_agreement.main_open_button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowMechanicAgreement(true);
+                        }}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        Mechanic Partner Agreement
+                      </button>
+                    </span>
+                  </label>
+                )}
+              </motion.div>
+
               {/* Auth buttons */}
               <motion.div
                 className="w-full flex flex-col gap-3"
@@ -191,7 +266,11 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                   type="button"
                   data-ocid="login.google.primary_button"
                   onClick={handleGoogleLogin}
-                  disabled={isLoggingIn}
+                  disabled={
+                    isLoggingIn ||
+                    !acceptTerms ||
+                    (selectedRole === "mechanic" && !acceptMechanicAgreement)
+                  }
                   className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70"
                 >
                   {isLoggingIn ? (

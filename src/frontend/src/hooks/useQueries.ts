@@ -275,7 +275,7 @@ export function useGetUserProfile(userId: string | undefined) {
     queryFn: async () => {
       if (!actor || !userId) return null;
       const { Principal } = await import("@icp-sdk/core/principal");
-      return actor.getMechanicPublicProfile(Principal.fromText(userId));
+      return actor.getUserProfile(Principal.fromText(userId));
     },
     enabled: !!actor && !isFetching && !!userId,
     staleTime: 30000,
@@ -324,7 +324,9 @@ export function useMechanicActiveJob() {
       return actor.getMechanicActiveJob();
     },
     enabled: !!actor && !isFetching,
-    refetchInterval: 5000,
+    refetchInterval: 2000,
+    staleTime: 0,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -463,6 +465,7 @@ export function useCustomerCompletedRequests() {
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 5000,
+    staleTime: 0,
   });
 }
 
@@ -476,6 +479,7 @@ export function useMechanicCompletedJobs() {
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 5000,
+    staleTime: 0,
   });
 }
 
