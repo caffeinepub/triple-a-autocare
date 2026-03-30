@@ -111,8 +111,7 @@ const MECHANIC_VISIBLE_STATUSES = new Set([
 function MechanicInfoRow({
   mechanicId,
   mechanicName,
-  mechanicRating,
-}: { mechanicId: string; mechanicName: string; mechanicRating?: number }) {
+}: { mechanicId: string; mechanicName: string }) {
   const { data: mechanicProfile } = useGetMechanicProfile(mechanicId);
 
   const initials = mechanicName
@@ -127,6 +126,11 @@ function MechanicInfoRow({
       ? Number(mechanicProfile.yearsOfExperience)
       : null;
   const specs = mechanicProfile?.specialties;
+  const avgRating =
+    mechanicProfile && Number(mechanicProfile.totalRatings) > 0
+      ? Number(mechanicProfile.ratingsSum) /
+        Number(mechanicProfile.totalRatings)
+      : null;
 
   return (
     <div className="flex items-center gap-3 bg-secondary/50 border border-border rounded-xl p-3">
@@ -158,11 +162,14 @@ function MechanicInfoRow({
             Specializes in {specs}
           </span>
         )}
-        {mechanicRating != null && mechanicRating > 0 && (
+        {avgRating != null && (
           <div className="flex items-center gap-1">
             <span className="text-yellow-400 text-xs">⭐</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              {avgRating.toFixed(1)}
+            </span>
             <span className="text-muted-foreground text-xs">
-              {mechanicRating.toFixed(1)}
+              ({Number(mechanicProfile?.totalRatings)} ratings)
             </span>
           </div>
         )}
@@ -236,10 +243,6 @@ function ActiveRequestCard({
   };
 
   const mechanicIdStr = request.mechanicId?.toString();
-  const { data: mechanics } = useMechanics();
-  const mechanicData = mechanics?.find((m) => m.id === mechanicIdStr);
-  const mechanicRating =
-    typeof mechanicData?.rating === "number" ? mechanicData.rating : undefined;
   const isAccepted = request.status === "accepted";
 
   return (
@@ -320,7 +323,6 @@ function ActiveRequestCard({
             <MechanicInfoRow
               mechanicId={mechanicIdStr}
               mechanicName={request.mechanicName}
-              mechanicRating={mechanicRating}
             />
           )}
 

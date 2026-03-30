@@ -15,6 +15,7 @@ import type { UserProfile } from "../backend";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
 import {
   useAcceptServiceRequest,
+  useGetUserProfile,
   useMechanicActiveJob,
   useSearchingRequests,
 } from "../hooks/useQueries";
@@ -41,6 +42,13 @@ function RequestCard({
   index: number;
   disabled: boolean;
 }) {
+  const customerIdStr = request.customerId?.toString();
+  const { data: customerProfile } = useGetUserProfile(customerIdStr);
+  const customerAvgRating =
+    customerProfile && Number(customerProfile.totalRatings) > 0
+      ? Number(customerProfile.ratingsSum) /
+        Number(customerProfile.totalRatings)
+      : null;
   return (
     <motion.div
       layout
@@ -61,6 +69,17 @@ function RequestCard({
           <p className="font-bold text-foreground text-base leading-tight">
             {request.customerName}
           </p>
+          {customerAvgRating != null && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="text-yellow-400 text-xs">⭐</span>
+              <span className="text-muted-foreground text-xs font-medium">
+                {customerAvgRating.toFixed(1)}
+              </span>
+              <span className="text-muted-foreground text-xs">
+                ({Number(customerProfile?.totalRatings)} ratings)
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-1 mt-1">
             <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <span className="text-muted-foreground text-xs truncate">
