@@ -39,6 +39,7 @@ import {
 } from "./utils/emailIdentityStore";
 
 const SEED_KEY = "triple-a-seeded-v1";
+const USER_PROFILE_KEY = "userProfile";
 // Statuses where chat is available — used for proactive unread tracking
 const CHAT_ACTIVE_STATUSES = ["accepted", "on_the_way", "arrived"];
 
@@ -51,7 +52,8 @@ interface ChatState {
 
 function AppContent() {
   const { identity: iiIdentity, isInitializing } = useInternetIdentity();
-  const { actor } = useActor();
+  // isFetching = actor is still building (async); include in loading guard
+  const { actor, isFetching: actorFetching } = useActor();
   const [customerTab, setCustomerTab] = useState<CustomerTab>("home");
   const [mechanicTab, setMechanicTab] = useState<MechanicTab>("dashboard");
   const [seeding, setSeeding] = useState(false);
@@ -86,6 +88,18 @@ function AppContent() {
 
   const principal = identity?.getPrincipal().toString() ?? "";
 
+  // Debug log on app start — runs once on mount, snapshot of initial state
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only log
+  useEffect(() => {
+    const localProfile = localStorage.getItem(USER_PROFILE_KEY);
+    console.log("[App] Start check:", {
+      isAuthenticated,
+      principal,
+      hasLocalProfile: !!localProfile,
+      emailIdentityRestored: !!getEmailIdentity(),
+    });
+  }, []);
+
   // Proactive unread chat tracking — poll messages for the current active
   // request even before the user opens chat, so the nav badge stays accurate.
   const { data: customerActiveReq } = useCustomerActiveRequest();
@@ -113,7 +127,6 @@ function AppContent() {
 
   // Bug fix: handle pending-role from sessionStorage in a useEffect instead
   // of calling the async mutation during the render phase (React anti-pattern).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: saveRoleMutateRef is stable ref
   useEffect(() => {
     if (
       !userAppRole &&
@@ -233,7 +246,10 @@ function AppContent() {
     );
   }
 
-  if (profileLoading || roleLoading || seeding) {
+  // CRITICAL: include actorFetching so we never flash onboarding while the
+  // actor is still building (profile query is disabled until actor is ready,
+  // so profileLoading would be false while profile is still undefined).
+  if (profileLoading || roleLoading || seeding || actorFetching) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -246,13 +262,23 @@ function AppContent() {
     );
   }
 
-  if (profile === null || profile === undefined) {
+  // Check localStorage as a secondary safety net: if the user already
+  // completed onboarding but the backend profile fetch hasn't resolved yet
+  // (e.g. transient slowness), don't redirect back to onboarding.
+  const localProfileStr = localStorage.getItem(USER_PROFILE_KEY);
+  console.log("[App] Profile state:", {
+    backendProfile: !!profile,
+    localProfile: !!localProfileStr,
+  });
+
+  if ((profile === null || profile === undefined) && !localProfileStr) {
+    // Genuinely new user — no profile anywhere.
     return (
       <OnboardingScreen
         role={selectedRole}
         onComplete={async (data) => {
           // Debug: confirm onComplete is being called with the right data
-          console.log("Saving user:", data);
+          console.log("Saving user profile:", data);
 
           // Throw immediately so OnboardingScreen can show the error
           if (!actor || !identity) {
@@ -285,23 +311,54 @@ function AppContent() {
           // 1. Save profile to backend
           await saveProfileMutation.mutateAsync(profileData);
 
-          // 2. Save role FIRST (localStorage + backend + queryData) so the
-          //    !userAppRole fallback branch won't fire on the next re-render
+          // 2. CRITICAL: Persist to localStorage immediately so a reload
+          //    doesn\'t send the user back to onboarding if the backend
+          //    fetch is slow or the actor rebuilds anonymously.
+          localStorage.setItem(
+            USER_PROFILE_KEY,
+            JSON.stringify({
+              name: data.name,
+              phone: data.phone,
+              address: data.address,
+              latitude: data.latitude,
+              longitude: data.longitude,
+            }),
+          );
+          console.log("[App] userProfile saved to localStorage");
+
+          // 3. Save role FIRST (localStorage + backend + queryData) so the
+          //    !userAppRole fallback branch won\'t fire on the next re-render
           await saveRoleMutation.mutateAsync(effectiveRole);
           queryClient.setQueryData(["userAppRole", principal], effectiveRole);
 
-          // 3. Clean up sessionStorage
+          // 4. Clean up sessionStorage
           if (pendingRole) {
             sessionStorage.removeItem("pending-role");
           }
 
-          // 4. NOW update profile queryData — triggers the final re-render to
+          // 5. NOW update profile queryData — triggers the final re-render to
           //    dashboard. Both profile and userAppRole are ready so the app
           //    goes straight to the dashboard without hitting the !userAppRole branch.
           queryClient.setQueryData(["profile"], profileData);
         }}
         isSaving={saveProfileMutation.isPending}
       />
+    );
+  }
+
+  // If localStorage says the user has onboarded but the backend profile is
+  // still null (e.g. actor just rebuilt after reload), show a brief spinner
+  // rather than sending the user back to onboarding.
+  if ((profile === null || profile === undefined) && localProfileStr) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <p className="text-muted-foreground text-sm">
+            Loading your account...
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -335,10 +392,10 @@ function AppContent() {
         <div className="w-full max-w-[430px] relative pb-20">
           {userAppRole === "customer" && (
             <>
-              {customerTab === "home" && <HomeTab profile={profile} />}
+              {customerTab === "home" && <HomeTab profile={profile!} />}
               {customerTab === "bookings" && (
                 <BookingsTab
-                  profile={profile}
+                  profile={profile!}
                   onOpenChat={(requestId, otherPartyName, otherPartyId) =>
                     handleOpenChat({
                       requestId,
@@ -352,7 +409,7 @@ function AppContent() {
               {customerTab === "marketplace" && <MarketplaceTab />}
               {customerTab === "profile" && (
                 <ProfileTab
-                  profile={profile}
+                  profile={profile!}
                   onSave={handleSaveProfile}
                   isSaving={saveProfileMutation.isPending}
                 />
@@ -362,11 +419,11 @@ function AppContent() {
           {userAppRole === "mechanic" && (
             <>
               {mechanicTab === "dashboard" && (
-                <MechanicDashboard profile={profile} />
+                <MechanicDashboard profile={profile!} />
               )}
               {mechanicTab === "jobs" && (
                 <MechanicJobsTab
-                  profile={profile}
+                  profile={profile!}
                   onOpenChat={(requestId, otherPartyName, otherPartyId) =>
                     handleOpenChat({
                       requestId,
@@ -380,7 +437,7 @@ function AppContent() {
               {mechanicTab === "earnings" && <MechanicEarningsTab />}
               {mechanicTab === "profile" && (
                 <ProfileTab
-                  profile={profile}
+                  profile={profile!}
                   onSave={handleSaveProfile}
                   isSaving={saveProfileMutation.isPending}
                 />

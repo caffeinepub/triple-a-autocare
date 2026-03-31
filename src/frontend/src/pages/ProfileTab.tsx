@@ -358,6 +358,7 @@ export default function ProfileTab({ profile }: Props) {
             data-ocid="profile.signout.button"
             onClick={() => {
               setEmailIdentity(null);
+              localStorage.removeItem("userProfile");
               clear();
             }}
             className="w-full h-14 rounded-2xl bg-primary/10 border border-primary/30 text-primary font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform hover:bg-primary/20"
@@ -371,6 +372,7 @@ export default function ProfileTab({ profile }: Props) {
             data-ocid="profile.switch_account.button"
             onClick={() => {
               setEmailIdentity(null);
+              localStorage.removeItem("userProfile");
               clear();
             }}
             className="text-muted-foreground text-sm text-center hover:text-foreground transition-colors py-2"
