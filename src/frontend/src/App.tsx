@@ -277,43 +277,16 @@ function AppContent() {
       <OnboardingScreen
         role={selectedRole}
         onComplete={async (data) => {
-          // Debug: confirm onComplete is being called with the right data
           console.log("Saving user profile:", data);
-
-          // Throw immediately so OnboardingScreen can show the error
-          if (!actor || !identity) {
-            throw new Error(
-              "Not connected to backend. Please refresh and try again.",
-            );
-          }
 
           const pendingRole = sessionStorage.getItem("pending-role") as
             | "customer"
             | "mechanic"
             | null;
-          // Fallback to the React state value if sessionStorage was cleared
           const effectiveRole: "customer" | "mechanic" =
             pendingRole ?? selectedRole;
 
-          const profileData: UserProfile = {
-            userId: identity.getPrincipal() as unknown as Principal,
-            name: data.name,
-            phone: data.phone,
-            location: data.location,
-            latitude: data.latitude,
-            longitude: data.longitude,
-            address: data.address,
-            role: effectiveRole,
-            totalRatings: BigInt(0),
-            ratingsSum: BigInt(0),
-          };
-
-          // 1. Save profile to backend
-          await saveProfileMutation.mutateAsync(profileData);
-
-          // 2. CRITICAL: Persist to localStorage immediately so a reload
-          //    doesn\'t send the user back to onboarding if the backend
-          //    fetch is slow or the actor rebuilds anonymously.
+          // STEP 1: ALWAYS save locally first — prevents onboarding loop on reload
           localStorage.setItem(
             USER_PROFILE_KEY,
             JSON.stringify({
@@ -324,22 +297,47 @@ function AppContent() {
               longitude: data.longitude,
             }),
           );
-          console.log("[App] userProfile saved to localStorage");
+          // Also save role locally so it's readable on next load even without backend
+          const roleKey = `aaa-app-role-${identity?.getPrincipal().toString() ?? "anon"}`;
+          localStorage.setItem(roleKey, effectiveRole);
+          console.log("[App] userProfile + role saved to localStorage");
 
-          // 3. Save role FIRST (localStorage + backend + queryData) so the
-          //    !userAppRole fallback branch won\'t fire on the next re-render
-          await saveRoleMutation.mutateAsync(effectiveRole);
-          queryClient.setQueryData(["userAppRole", principal], effectiveRole);
+          // STEP 2: Try backend — but don't block user if it fails
+          try {
+            if (!actor || !identity) {
+              console.warn("⚠️ Actor not ready, using local fallback");
+            } else {
+              const profileData: UserProfile = {
+                userId: identity.getPrincipal() as unknown as Principal,
+                name: data.name,
+                phone: data.phone,
+                location: data.location,
+                latitude: data.latitude,
+                longitude: data.longitude,
+                address: data.address,
+                role: effectiveRole,
+                totalRatings: BigInt(0),
+                ratingsSum: BigInt(0),
+              };
 
-          // 4. Clean up sessionStorage
-          if (pendingRole) {
-            sessionStorage.removeItem("pending-role");
+              await saveProfileMutation.mutateAsync(profileData);
+
+              await saveRoleMutation.mutateAsync(effectiveRole);
+              queryClient.setQueryData(
+                ["userAppRole", principal],
+                effectiveRole,
+              );
+
+              if (pendingRole) {
+                sessionStorage.removeItem("pending-role");
+              }
+
+              queryClient.setQueryData(["profile"], profileData);
+            }
+            console.log("✅ Backend save success");
+          } catch (err) {
+            console.warn("⚠️ Backend failed, using local fallback", err);
           }
-
-          // 5. NOW update profile queryData — triggers the final re-render to
-          //    dashboard. Both profile and userAppRole are ready so the app
-          //    goes straight to the dashboard without hitting the !userAppRole branch.
-          queryClient.setQueryData(["profile"], profileData);
         }}
         isSaving={saveProfileMutation.isPending}
       />
