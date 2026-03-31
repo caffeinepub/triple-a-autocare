@@ -28,6 +28,7 @@ export default function OnboardingScreen({
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -64,22 +65,19 @@ export default function OnboardingScreen({
     e.preventDefault();
     setError("");
 
-    if (!name.trim()) {
-      setError("Please enter your name");
+    // Validate all required fields
+    if (!name.trim() || !phone.trim() || !address.trim()) {
+      setError("Please fill all required fields");
       return;
     }
     if (phone.trim().length < 5) {
       setError("Please enter a valid phone number");
       return;
     }
-    if (!address.trim()) {
-      setError("Please enter your address");
-      return;
-    }
 
-    // Bug fix: wrap onComplete in try/catch so errors surface in the UI
-    // instead of leaving the button stuck in a loading state.
     try {
+      setLoading(true);
+
       await onComplete({
         name,
         phone,
@@ -88,17 +86,26 @@ export default function OnboardingScreen({
         longitude,
         address,
       });
+
+      // Navigate to dashboard after successful save.
+      // Using location.href is reliable even if React state updates
+      // don't trigger a re-render (e.g. actor not ready yet on first load).
+      window.location.href = "/";
     } catch (err) {
+      console.error(err);
       setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.",
+        err instanceof Error ? err.message : "Something went wrong. Try again.",
       );
+    } finally {
+      setLoading(false);
     }
   };
 
   const locationLabel =
     role === "mechanic" ? "Workshop Location" : "Home Address";
+
+  // Disable button while either the local submit or the parent mutation is pending
+  const isSubmitting = loading || isSaving;
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -200,21 +207,21 @@ export default function OnboardingScreen({
             {geoError && <p className="text-xs text-destructive">{geoError}</p>}
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive font-medium text-center">
-              {error}
-            </p>
-          )}
-
           <button
             data-ocid="onboarding.submit_button"
             type="submit"
-            disabled={isSaving}
+            disabled={isSubmitting}
             className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70 mt-2"
           >
-            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {isSaving ? "Saving..." : "Continue"}
+            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            {isSubmitting ? "Saving..." : "Continue"}
           </button>
+
+          {error && (
+            <p className="text-sm text-destructive font-medium text-center -mt-2">
+              {error}
+            </p>
+          )}
         </form>
       </motion.div>
     </div>

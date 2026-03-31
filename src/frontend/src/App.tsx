@@ -251,7 +251,16 @@ function AppContent() {
       <OnboardingScreen
         role={selectedRole}
         onComplete={async (data) => {
-          if (!actor || !identity) return;
+          // Debug: confirm onComplete is being called with the right data
+          console.log("Saving user:", data);
+
+          // Throw immediately so OnboardingScreen can show the error
+          if (!actor || !identity) {
+            throw new Error(
+              "Not connected to backend. Please refresh and try again.",
+            );
+          }
+
           const pendingRole = sessionStorage.getItem("pending-role") as
             | "customer"
             | "mechanic"
