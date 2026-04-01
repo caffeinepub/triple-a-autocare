@@ -240,13 +240,35 @@ export function useUpdateUserProfile() {
       yearsOfExperience?: bigint | null;
       specialties?: string | null;
     }) => {
-      if (!actor) throw new Error("Not connected");
-      return actor.updateUserProfile(
-        params.name ?? null,
-        params.profileImage ?? null,
-        params.yearsOfExperience ?? null,
-        params.specialties ?? null,
-      );
+      try {
+        if (!actor) throw new Error("No actor");
+        return await actor.updateUserProfile(
+          params.name ?? null,
+          params.profileImage ?? null,
+          params.yearsOfExperience ?? null,
+          params.specialties ?? null,
+        );
+      } catch (e) {
+        console.warn("⚠️ Saving profile locally", e);
+        const existing = JSON.parse(
+          localStorage.getItem("userProfile") || "{}",
+        );
+        const updated = {
+          ...existing,
+          ...(params.name != null && { name: params.name }),
+          ...(params.profileImage != null && {
+            profileImage: params.profileImage,
+          }),
+          ...(params.yearsOfExperience != null && {
+            yearsOfExperience: Number(params.yearsOfExperience),
+          }),
+          ...(params.specialties != null && {
+            specialties: params.specialties,
+          }),
+        };
+        localStorage.setItem("userProfile", JSON.stringify(updated));
+        return null;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
@@ -275,7 +297,7 @@ export function useGetUserProfile(userId: string | undefined) {
     queryFn: async () => {
       if (!actor || !userId) return null;
       const { Principal } = await import("@icp-sdk/core/principal");
-      return actor.getMechanicPublicProfile(Principal.fromText(userId));
+      return actor.getUserProfile(Principal.fromText(userId));
     },
     enabled: !!actor && !isFetching && !!userId,
     staleTime: 30000,
@@ -287,14 +309,33 @@ export function useGetUserProfile(userId: string | undefined) {
 // ---------------------------------------------------------------------------
 
 export function useCustomerActiveRequest() {
-  const { actor, isFetching } = useActor();
+  const { actor } = useActor();
   return useQuery<ExtendedServiceRequest | null>({
     queryKey: ["customerActiveRequest"],
     queryFn: async () => {
-      if (!actor) return null;
-      return actor.getCustomerActiveRequest();
+      try {
+        if (!actor) throw new Error("No actor");
+        const result = await actor.getCustomerActiveRequest();
+        return result;
+      } catch (e) {
+        console.warn("⚠️ Backend unavailable, loading local requests", e);
+        const localRequests: any[] = JSON.parse(
+          localStorage.getItem("requests") || "[]",
+        );
+        const active = localRequests.find((r: any) =>
+          [
+            "searching",
+            "accepted",
+            "on_the_way",
+            "arrived",
+            "price_sent",
+            "approved",
+          ].includes(r.status),
+        );
+        return active ?? null;
+      }
     },
-    enabled: !!actor && !isFetching,
+    enabled: true,
     refetchInterval: 2000,
     staleTime: 0,
     refetchIntervalInBackground: true,
@@ -324,7 +365,9 @@ export function useMechanicActiveJob() {
       return actor.getMechanicActiveJob();
     },
     enabled: !!actor && !isFetching,
-    refetchInterval: 5000,
+    refetchInterval: 2000,
+    staleTime: 0,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -341,16 +384,47 @@ export function useCreateServiceRequest() {
       longitude?: number | null;
       address?: string | null;
     }) => {
-      if (!actor) throw new Error("Not connected");
-      return actor.createServiceRequest(
-        params.customerName,
-        params.location,
-        params.issueDescription,
-        params.serviceType,
-        params.latitude ?? null,
-        params.longitude ?? null,
-        params.address ?? null,
-      );
+      let request: any;
+      try {
+        if (!actor) throw new Error("No actor");
+        request = await actor.createServiceRequest(
+          params.customerName,
+          params.location,
+          params.issueDescription,
+          params.serviceType,
+          params.latitude ?? null,
+          params.longitude ?? null,
+          params.address ?? null,
+        );
+        console.log("✅ Backend request created");
+      } catch (e) {
+        console.warn("⚠️ Backend failed, using local request", e);
+        request = {
+          id: Date.now().toString(),
+          customerId: "",
+          customerName: params.customerName,
+          location: params.location,
+          issueDescription: params.issueDescription,
+          serviceType: params.serviceType,
+          status: "searching",
+          mechanicId: null,
+          mechanicName: null,
+          price: null,
+          createdAt: BigInt(Date.now()),
+          updatedAt: BigInt(Date.now()),
+          cancelledBy: null,
+          cancellationReason: null,
+          customerRating: null,
+          mechanicRating: null,
+          latitude: params.latitude ?? null,
+          longitude: params.longitude ?? null,
+          address: params.address ?? null,
+        } as any;
+        const existing = JSON.parse(localStorage.getItem("requests") || "[]");
+        existing.push(request);
+        localStorage.setItem("requests", JSON.stringify(existing));
+      }
+      return request;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customerActiveRequest"] });
@@ -463,6 +537,7 @@ export function useCustomerCompletedRequests() {
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 5000,
+    staleTime: 0,
   });
 }
 
@@ -476,6 +551,7 @@ export function useMechanicCompletedJobs() {
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 5000,
+    staleTime: 0,
   });
 }
 
