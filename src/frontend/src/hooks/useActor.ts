@@ -9,14 +9,16 @@ const ACTOR_QUERY_KEY = "actor";
 export function useActor() {
   const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
-  const actorQuery = useQuery<backendInterface>({
+
+  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
+
+  const actorQuery = useQuery<backendInterface | null>({
     queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
     queryFn: async () => {
-      const isAuthenticated = !!identity;
-
+      // Only create actor for authenticated Internet Identity users.
+      // No anonymous fallback — callers must check for null actor.
       if (!isAuthenticated) {
-        // Return anonymous actor if not authenticated
-        return await createActorWithConfig();
+        return null;
       }
 
       const actorOptions = {
@@ -30,9 +32,7 @@ export function useActor() {
       await actor._initializeAccessControlWithSecret(adminToken);
       return actor;
     },
-    // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
-    // This will cause the actor to be recreated when the identity changes
     enabled: true,
   });
 
@@ -53,7 +53,7 @@ export function useActor() {
   }, [actorQuery.data, queryClient]);
 
   return {
-    actor: actorQuery.data || null,
+    actor: actorQuery.data ?? null,
     isFetching: actorQuery.isFetching,
   };
 }

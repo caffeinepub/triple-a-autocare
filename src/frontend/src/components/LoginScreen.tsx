@@ -297,16 +297,7 @@ export default function LoginScreen({ selectedRole, onBack }: Props) {
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                {/* Continue with Email */}
-                <button
-                  type="button"
-                  data-ocid="login.email.primary_button"
-                  onClick={() => setView("email")}
-                  className="w-full h-14 rounded-2xl border border-border bg-card text-foreground font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform hover:bg-card/80"
-                >
-                  <Mail className="w-5 h-5 text-muted-foreground" />
-                  Continue with Email
-                </button>
+                {/* Email login temporarily disabled — use Internet Identity */}
 
                 <p className="text-muted-foreground text-xs text-center">
                   Secure login — no data shared without your consent

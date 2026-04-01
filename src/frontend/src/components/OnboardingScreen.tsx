@@ -74,12 +74,8 @@ export default function OnboardingScreen({
     setError("");
     console.log("⏳ Saving user...");
 
-    // STEP 1: Try backend — but don't block if it fails
     try {
-      if (!onComplete) {
-        console.log("❌ onComplete is undefined");
-      }
-      await onComplete?.({
+      await onComplete({
         name,
         phone,
         location: address,
@@ -87,20 +83,19 @@ export default function OnboardingScreen({
         longitude,
         address,
       });
-      console.log("✅ Backend save success");
+      console.log("✅ Profile saved");
+      // Navigate only on success
+      window.location.href = "/";
     } catch (err) {
-      console.warn("⚠️ Backend failed, using local fallback", err);
+      console.error("❌ Save failed:", err);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Failed to save profile. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
-
-    // STEP 2: ALWAYS save locally regardless of backend result
-    localStorage.setItem(
-      "userProfile",
-      JSON.stringify({ name, phone, address, latitude, longitude }),
-    );
-    console.log("✅ Local profile saved");
-
-    // STEP 3: ALWAYS navigate — user is never blocked
-    window.location.href = "/";
   };
 
   const locationLabel =

@@ -1,5 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
-import type { Identity } from "@icp-sdk/core/agent";
+
 import type { Principal } from "@icp-sdk/core/principal";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -33,10 +33,6 @@ import MechanicDashboard from "./pages/MechanicDashboard";
 import MechanicEarningsTab from "./pages/MechanicEarningsTab";
 import MechanicJobsTab from "./pages/MechanicJobsTab";
 import ProfileTab from "./pages/ProfileTab";
-import {
-  getEmailIdentity,
-  subscribeEmailIdentity,
-} from "./utils/emailIdentityStore";
 
 const SEED_KEY = "triple-a-seeded-v1";
 const USER_PROFILE_KEY = "userProfile";
@@ -51,7 +47,7 @@ interface ChatState {
 }
 
 function AppContent() {
-  const { identity: iiIdentity, isInitializing } = useInternetIdentity();
+  const { identity, isInitializing } = useInternetIdentity();
   // isFetching = actor is still building (async); include in loading guard
   const { actor, isFetching: actorFetching } = useActor();
   const [customerTab, setCustomerTab] = useState<CustomerTab>("home");
@@ -67,16 +63,7 @@ function AppContent() {
     return () => clearTimeout(timeout);
   }, []);
 
-  // Email identity from email/password auth
-  const [emailIdentity, setEmailIdentityState] = useState<Identity | null>(
-    getEmailIdentity,
-  );
-  useEffect(() => {
-    return subscribeEmailIdentity(setEmailIdentityState);
-  }, []);
-
-  // Use email identity as fallback when II identity is anonymous
-  const identity = emailIdentity ?? iiIdentity;
+  // Identity comes exclusively from Internet Identity
 
   // Pre-auth two-step flow
   const [preAuthStep, setPreAuthStep] = useState<"role" | "auth">("role");
@@ -121,7 +108,6 @@ function AppContent() {
       isAuthenticated,
       principal,
       hasLocalProfile: !!localProfile,
-      emailIdentityRestored: !!getEmailIdentity(),
     });
   }, []);
 
@@ -258,7 +244,7 @@ function AppContent() {
     }
   };
 
-  if (isInitializing && !emailIdentity) {
+  if (isInitializing) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -356,6 +342,13 @@ function AppContent() {
         onComplete={async (data) => {
           console.log("Saving user profile:", data);
 
+          // Require a valid authenticated actor — no anonymous fallback.
+          if (!actor || !identity) {
+            throw new Error(
+              "Not connected. Please sign in with Internet Identity and try again.",
+            );
+          }
+
           const pendingRole = sessionStorage.getItem("pending-role") as
             | "customer"
             | "mechanic"
@@ -363,7 +356,26 @@ function AppContent() {
           const roleToSave: "customer" | "mechanic" =
             pendingRole ?? selectedRole;
 
-          // STEP 1: ALWAYS save locally first — prevents onboarding loop on reload
+          const profileData: UserProfile = {
+            userId: identity.getPrincipal() as unknown as Principal,
+            name: data.name,
+            phone: data.phone,
+            location: data.location,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            address: data.address,
+            role: roleToSave,
+            totalRatings: BigInt(0),
+            ratingsSum: BigInt(0),
+          };
+
+          await saveProfileMutation.mutateAsync(profileData);
+          await saveRoleMutation.mutateAsync(roleToSave);
+
+          queryClient.setQueryData(["userAppRole", principal], roleToSave);
+          queryClient.setQueryData(["profile"], profileData);
+
+          // Persist locally so app starts instantly on reload
           localStorage.setItem(
             USER_PROFILE_KEY,
             JSON.stringify({
@@ -374,44 +386,14 @@ function AppContent() {
               longitude: data.longitude,
             }),
           );
-          // Also save role locally so it's readable on next load even without backend
-          const roleKey = `aaa-app-role-${identity?.getPrincipal().toString() ?? "anon"}`;
+          const roleKey = `aaa-app-role-${identity.getPrincipal().toString()}`;
           localStorage.setItem(roleKey, roleToSave);
-          console.log("[App] userProfile + role saved to localStorage");
 
-          // STEP 2: Try backend — but don't block user if it fails
-          try {
-            if (!actor || !identity) {
-              console.warn("⚠️ Actor not ready, using local fallback");
-            } else {
-              const profileData: UserProfile = {
-                userId: identity.getPrincipal() as unknown as Principal,
-                name: data.name,
-                phone: data.phone,
-                location: data.location,
-                latitude: data.latitude,
-                longitude: data.longitude,
-                address: data.address,
-                role: roleToSave,
-                totalRatings: BigInt(0),
-                ratingsSum: BigInt(0),
-              };
-
-              await saveProfileMutation.mutateAsync(profileData);
-
-              await saveRoleMutation.mutateAsync(roleToSave);
-              queryClient.setQueryData(["userAppRole", principal], roleToSave);
-
-              if (pendingRole) {
-                sessionStorage.removeItem("pending-role");
-              }
-
-              queryClient.setQueryData(["profile"], profileData);
-            }
-            console.log("✅ Backend save success");
-          } catch (err) {
-            console.warn("⚠️ Backend failed, using local fallback", err);
+          if (pendingRole) {
+            sessionStorage.removeItem("pending-role");
           }
+
+          console.log("✅ Profile saved to backend successfully");
         }}
         isSaving={saveProfileMutation.isPending}
       />
