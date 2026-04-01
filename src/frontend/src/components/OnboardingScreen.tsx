@@ -20,15 +20,13 @@ export default function OnboardingScreen({
   onComplete,
   isSaving,
 }: Props) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [name, setName] = useState("Paul");
+  const [phone, setPhone] = useState("+234 ");
   const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -61,53 +59,20 @@ export default function OnboardingScreen({
     );
   };
 
-  const handleContinue = async () => {
-    console.log("🔥 Continue clicked");
-
-    if (!name || !phone || !address) {
-      console.log("❌ Validation failed", { name, phone, address });
-      setError("Please fill all required fields");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    console.log("⏳ Saving user...");
-
-    // STEP 1: Try backend — but don't block if it fails
-    try {
-      if (!onComplete) {
-        console.log("❌ onComplete is undefined");
-      }
-      await onComplete?.({
-        name,
-        phone,
-        location: address,
-        latitude,
-        longitude,
-        address,
-      });
-      console.log("✅ Backend save success");
-    } catch (err) {
-      console.warn("⚠️ Backend failed, using local fallback", err);
-    }
-
-    // STEP 2: ALWAYS save locally regardless of backend result
-    localStorage.setItem(
-      "userProfile",
-      JSON.stringify({ name, phone, address, latitude, longitude }),
-    );
-    console.log("✅ Local profile saved");
-
-    // STEP 3: ALWAYS navigate — user is never blocked
-    window.location.href = "/";
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onComplete({
+      name,
+      phone,
+      location: address,
+      latitude,
+      longitude,
+      address,
+    });
   };
 
   const locationLabel =
     role === "mechanic" ? "Workshop Location" : "Home Address";
-
-  // Disable button while local submit or parent mutation is pending
-  const isSubmitting = loading || isSaving;
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -125,7 +90,7 @@ export default function OnboardingScreen({
           </p>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label
               htmlFor="ob-name"
@@ -143,6 +108,7 @@ export default function OnboardingScreen({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your name"
                 className="w-full h-14 bg-card border border-border rounded-2xl pl-11 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                required
               />
             </div>
           </div>
@@ -164,6 +130,7 @@ export default function OnboardingScreen({
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+234 800 000 0000"
                 className="w-full h-14 bg-card border border-border rounded-2xl pl-11 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                required
               />
             </div>
           </div>
@@ -190,6 +157,7 @@ export default function OnboardingScreen({
                 }}
                 placeholder="Enter your address"
                 className="w-full h-14 bg-card border border-border rounded-2xl pl-11 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                required
               />
             </div>
             <button
@@ -209,24 +177,16 @@ export default function OnboardingScreen({
             {geoError && <p className="text-xs text-destructive">{geoError}</p>}
           </div>
 
-          {/* Continue button — type=button + onClick to avoid form-submit issues */}
           <button
             data-ocid="onboarding.submit_button"
-            type="button"
-            onClick={handleContinue}
-            disabled={isSubmitting}
-            className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70 mt-2 relative z-10"
+            type="submit"
+            disabled={isSaving}
+            className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform disabled:opacity-70 mt-2"
           >
-            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {isSubmitting ? "Saving..." : "Continue"}
+            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            {isSaving ? "Saving..." : "Continue"}
           </button>
-
-          {error && (
-            <p className="text-sm text-destructive font-medium text-center -mt-2">
-              {error}
-            </p>
-          )}
-        </div>
+        </form>
       </motion.div>
     </div>
   );

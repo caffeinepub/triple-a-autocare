@@ -654,10 +654,8 @@ export default function MechanicJobsTab({
   const { data: jobs, isLoading: jobsLoading } = useGetServiceRequests();
   const { data: historyJobs, isLoading: historyLoading } =
     useMechanicCompletedJobs();
-  const { identity: iiIdentity } = useInternetIdentity();
-  // Bug fix: use email identity for principal when available
-  const currentPrincipal =
-    (getEmailIdentity() ?? iiIdentity)?.getPrincipal().toString() ?? "";
+  const { identity } = useInternetIdentity();
+  const currentPrincipal = identity?.getPrincipal().toString() ?? "";
 
   // Active jobs: only ACTIVE_STATUSES
   const activeJobs = (jobs ?? []).filter((j) => ACTIVE_STATUSES.has(j.status));
@@ -722,7 +720,12 @@ export default function MechanicJobsTab({
                   key={job.id}
                   job={job}
                   onOpenChat={onOpenChat ?? ((_id, _name, _pid) => {})}
-                  currentUserId={currentPrincipal}
+                  currentUserId={(() => {
+                    const emailId = getEmailIdentity();
+                    return (
+                      emailId?.getPrincipal().toString() ?? currentPrincipal
+                    );
+                  })()}
                 />
               ))}
             </div>

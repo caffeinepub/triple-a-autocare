@@ -29,7 +29,7 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Variant_cancelled_pending_completed_confirmed } from "../backend";
-import type { Booking, UserProfile } from "../backend";
+import type { Booking } from "../backend";
 import MechanicRequestModal from "../components/MechanicRequestModal";
 import ReviewModal from "../components/ReviewModal";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -675,10 +675,8 @@ function BookingCard({
 
 export default function BookingsTab({
   onOpenChat,
-  profile,
 }: {
   onOpenChat?: (requestId: string, name: string, otherPartyId?: string) => void;
-  profile?: UserProfile;
 }) {
   const { identity: iiIdentity } = useInternetIdentity();
   const emailIdentity = getEmailIdentity();
@@ -875,7 +873,6 @@ export default function BookingsTab({
       <MechanicRequestModal
         open={requestOpen}
         onClose={() => setRequestOpen(false)}
-        profile={profile}
       />
 
       {reviewState && (
