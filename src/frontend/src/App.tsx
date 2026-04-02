@@ -638,6 +638,8 @@ function AppContent() {
                   profile={effectiveProfile!}
                   onSave={handleSaveProfile}
                   isSaving={saveProfileMutation.isPending}
+                  isAdmin={!!isAdmin}
+                  onAdminPanel={() => setAdminMechanicTab("admin")}
                 />
               )}
               {isMechanicAdmin && currentMechanicView === "admin" && (

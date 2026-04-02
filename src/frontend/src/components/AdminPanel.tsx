@@ -12,11 +12,20 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
+import type { UserProfile, backendInterface } from "../backend";
 import { useActor } from "../hooks/useActor";
 
 // Extend UserProfile locally to include verificationStatus (added by backend but not yet in TS interface)
 type MechanicProfile = UserProfile & { verificationStatus?: string };
+
+// Extend backendInterface locally to include admin methods
+interface AdminBackendInterface extends backendInterface {
+  getAllMechanics(): Promise<Array<MechanicProfile>>;
+  updateMechanicVerificationStatus(
+    mechanicId: Principal,
+    status: string,
+  ): Promise<void>;
+}
 
 function getInitials(name: string) {
   return name
@@ -157,7 +166,8 @@ function MechanicCard({
 }
 
 export default function AdminPanel() {
-  const { actor } = useActor();
+  const { actor: rawActor } = useActor();
+  const actor = rawActor as unknown as AdminBackendInterface | null;
   const queryClient = useQueryClient();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -169,8 +179,7 @@ export default function AdminPanel() {
     queryKey: ["admin", "mechanics"],
     queryFn: async () => {
       if (!actor) return [];
-      // getAllMechanics is on the Backend class (not in backendInterface yet), so cast
-      return (actor as any).getAllMechanics() as Promise<MechanicProfile[]>;
+      return actor.getAllMechanics() as Promise<MechanicProfile[]>;
     },
     enabled: !!actor,
     refetchInterval: 10_000,
@@ -181,11 +190,11 @@ export default function AdminPanel() {
     const idStr = mechanicId.toString();
     setUpdatingId(idStr);
     try {
-      await (actor as any).updateMechanicVerificationStatus(
-        mechanicId,
-        "approved",
-      );
-      await queryClient.invalidateQueries({ queryKey: ["admin", "mechanics"] });
+      await actor.updateMechanicVerificationStatus(mechanicId, "approved");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "mechanics"] }),
+        queryClient.invalidateQueries({ queryKey: ["searchingRequests"] }),
+      ]);
       toast.success("Mechanic approved");
     } catch (err) {
       console.error("[AdminPanel] Approve error:", err);
@@ -200,11 +209,11 @@ export default function AdminPanel() {
     const idStr = mechanicId.toString();
     setUpdatingId(idStr);
     try {
-      await (actor as any).updateMechanicVerificationStatus(
-        mechanicId,
-        "rejected",
-      );
-      await queryClient.invalidateQueries({ queryKey: ["admin", "mechanics"] });
+      await actor.updateMechanicVerificationStatus(mechanicId, "rejected");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "mechanics"] }),
+        queryClient.invalidateQueries({ queryKey: ["searchingRequests"] }),
+      ]);
       toast.success("Mechanic rejected");
     } catch (err) {
       console.error("[AdminPanel] Reject error:", err);

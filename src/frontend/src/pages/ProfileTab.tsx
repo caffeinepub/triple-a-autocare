@@ -1,5 +1,5 @@
 import type { Principal } from "@icp-sdk/core/principal";
-import { Camera, Loader2, LogOut, Star, Wrench } from "lucide-react";
+import { Camera, Loader2, LogOut, Shield, Star, Wrench } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -21,6 +21,8 @@ interface Props {
     location: string;
   }) => Promise<void>;
   isSaving?: boolean;
+  isAdmin?: boolean;
+  onAdminPanel?: () => void;
 }
 
 function Avatar({
@@ -54,7 +56,7 @@ function Avatar({
   );
 }
 
-export default function ProfileTab({ profile }: Props) {
+export default function ProfileTab({ profile, isAdmin, onAdminPanel }: Props) {
   const { clear, identity } = useInternetIdentity();
   const { data: userAppRole } = useUserAppRole();
   const updateProfile = useUpdateUserProfile();
@@ -353,6 +355,18 @@ export default function ProfileTab({ profile }: Props) {
           transition={{ delay: 0.2 }}
           className="flex flex-col gap-3"
         >
+          {isAdmin && (
+            <button
+              type="button"
+              data-ocid="profile.admin_panel.button"
+              onClick={() => onAdminPanel?.()}
+              className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 shadow-yellow active:scale-[0.98] transition-transform hover:opacity-90"
+            >
+              <Shield className="w-5 h-5" />
+              Admin Panel
+            </button>
+          )}
+
           <button
             type="button"
             data-ocid="profile.signout.button"
