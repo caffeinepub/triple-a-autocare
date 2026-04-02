@@ -842,6 +842,13 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getAllMechanics(): Promise<Array<UserProfile>> {
+        const result = await (this.actor as any).getAllMechanics();
+        return result.map((p: any) => from_candid_UserProfile_record(this.uploadFile, this.downloadFile, p));
+    }
+    async updateMechanicVerificationStatus(mechanicId: import("@icp-sdk/core/principal").Principal, status: string): Promise<void> {
+        await (this.actor as any).updateMechanicVerificationStatus(mechanicId, status);
+    }
 }
 function from_candid_Booking_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Booking): Booking {
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
@@ -876,6 +883,7 @@ function from_candid_UserProfile_record(_uploadFile: (file: ExternalBlob) => Pro
         specialties: (v as any).specialties != null && (v as any).specialties.length > 0 ? (v as any).specialties[0] : undefined,
         totalRatings: (v as any).totalRatings ?? BigInt(0),
         ratingsSum: (v as any).ratingsSum ?? BigInt(0),
+        verificationStatus: (v as any).verificationStatus != null && (v as any).verificationStatus.length > 0 ? (v as any).verificationStatus[0] : undefined,
     };
 }
 function from_candid_opt_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {

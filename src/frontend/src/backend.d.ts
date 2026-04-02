@@ -71,6 +71,7 @@ export interface UserProfile {
     specialties?: string;
     totalRatings: bigint;
     ratingsSum: bigint;
+    verificationStatus?: string;
 }
 export interface Review {
     id: string;
@@ -156,4 +157,6 @@ export interface backendInterface {
     updateServiceRequest(requestId: string, price: bigint, status: "price_sent"): Promise<void>;
     updateServiceRequestStatus(requestId: string, newStatus: Variant_on_the_way_arrived_completed_accepted): Promise<void>;
     updateUserProfile(name: string | null, profileImage: string | null, yearsOfExperience: bigint | null, specialties: string | null): Promise<UserProfile>;
+    getAllMechanics(): Promise<Array<UserProfile>>;
+    updateMechanicVerificationStatus(mechanicId: Principal, status: string): Promise<void>;
 }

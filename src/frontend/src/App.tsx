@@ -1,10 +1,16 @@
 import { Toaster } from "@/components/ui/sonner";
 
 import type { Principal } from "@icp-sdk/core/principal";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Clock, LogOut, ShieldX, Wrench } from "lucide-react";
+import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { UserProfile } from "./backend";
+import AdminPanel from "./components/AdminPanel";
 import {
+  AdminMechanicBottomNav,
+  type AdminMechanicTab,
   CustomerBottomNav,
   type CustomerTab,
   MechanicBottomNav,
@@ -33,10 +39,10 @@ import MechanicDashboard from "./pages/MechanicDashboard";
 import MechanicEarningsTab from "./pages/MechanicEarningsTab";
 import MechanicJobsTab from "./pages/MechanicJobsTab";
 import ProfileTab from "./pages/ProfileTab";
+import { setEmailIdentity } from "./utils/emailIdentityStore";
 
 const SEED_KEY = "triple-a-seeded-v1";
 const USER_PROFILE_KEY = "userProfile";
-// Statuses where chat is available — used for proactive unread tracking
 const CHAT_ACTIVE_STATUSES = ["accepted", "on_the_way", "arrived"];
 
 interface ChatState {
@@ -46,31 +52,159 @@ interface ChatState {
   userRole: "customer" | "mechanic";
 }
 
+// ---- Mechanic Verification Gate ----
+
+function MechanicPendingGate({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      <motion.div
+        className="flex flex-col items-center gap-6 text-center max-w-sm w-full"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex flex-col items-center gap-2 mb-2">
+          <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30">
+            <Wrench className="w-7 h-7 text-primary" />
+          </div>
+          <p className="text-primary font-bold text-sm tracking-widest uppercase">
+            Triple A AutoCare
+          </p>
+        </div>
+
+        <div className="w-20 h-20 rounded-full bg-yellow-500/15 border-2 border-yellow-500/30 flex items-center justify-center">
+          <Clock className="w-10 h-10 text-yellow-400" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold text-foreground">
+            Account Under Review
+          </h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Your account is under review. You will be approved shortly.
+          </p>
+        </div>
+
+        <div className="w-full bg-card border border-border rounded-2xl p-4 text-left flex flex-col gap-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            What happens next?
+          </p>
+          <div className="flex items-start gap-2">
+            <span className="text-yellow-400 text-sm mt-0.5">1.</span>
+            <p className="text-foreground text-sm">
+              Our team reviews your mechanic application
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-yellow-400 text-sm mt-0.5">2.</span>
+            <p className="text-foreground text-sm">
+              Once approved, you will start receiving job requests
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-yellow-400 text-sm mt-0.5">3.</span>
+            <p className="text-foreground text-sm">
+              This usually takes less than 24 hours
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          data-ocid="mechanic.pending.signout.button"
+          onClick={onLogout}
+          className="w-full h-14 rounded-2xl bg-secondary border border-border text-foreground font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform hover:bg-secondary/80"
+        >
+          <LogOut className="w-5 h-5" />
+          Log Out
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
+function MechanicRejectedGate({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      <motion.div
+        className="flex flex-col items-center gap-6 text-center max-w-sm w-full"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex flex-col items-center gap-2 mb-2">
+          <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30">
+            <Wrench className="w-7 h-7 text-primary" />
+          </div>
+          <p className="text-primary font-bold text-sm tracking-widest uppercase">
+            Triple A AutoCare
+          </p>
+        </div>
+
+        <div className="w-20 h-20 rounded-full bg-red-500/15 border-2 border-red-500/30 flex items-center justify-center">
+          <ShieldX className="w-10 h-10 text-red-400" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold text-foreground">
+            Application Not Approved
+          </h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Your application was not approved. Please contact support for more
+            information.
+          </p>
+        </div>
+
+        <div className="w-full bg-card border border-border rounded-2xl p-4 text-left">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Need help?
+          </p>
+          <p className="text-foreground text-sm">
+            Contact our support team at{" "}
+            <span className="text-primary font-semibold">
+              support@tripleaautocare.ng
+            </span>{" "}
+            for more information about your application status.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          data-ocid="mechanic.rejected.signout.button"
+          onClick={onLogout}
+          className="w-full h-14 rounded-2xl bg-secondary border border-border text-foreground font-semibold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform hover:bg-secondary/80"
+        >
+          <LogOut className="w-5 h-5" />
+          Log Out
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
+// ---- Main App ----
+
 function AppContent() {
-  const { identity, isInitializing } = useInternetIdentity();
-  // isFetching = actor is still building (async); include in loading guard
+  const { identity, isInitializing, clear } = useInternetIdentity();
   const { actor, isFetching: actorFetching } = useActor();
   const [customerTab, setCustomerTab] = useState<CustomerTab>("home");
   const [mechanicTab, setMechanicTab] = useState<MechanicTab>("dashboard");
+  const [adminMechanicTab, setAdminMechanicTab] =
+    useState<AdminMechanicTab>("dashboard");
   const [seeding, setSeeding] = useState(false);
   const queryClient = useQueryClient();
   const [chatState, setChatState] = useState<ChatState | null>(null);
 
-  // Safety timeout — if backend never resolves, unblock the UI after 2s
   const [forcedLoadDone, setForcedLoadDone] = useState(false);
   useEffect(() => {
     const timeout = setTimeout(() => setForcedLoadDone(true), 2000);
     return () => clearTimeout(timeout);
   }, []);
 
-  // Identity comes exclusively from Internet Identity
-
-  // Pre-auth two-step flow
   const [preAuthStep, setPreAuthStep] = useState<"role" | "auth">("role");
   const [selectedRole, setSelectedRole] = useState<"customer" | "mechanic">(
     "customer",
   );
-  // Track whether we're in the process of saving a pending role from sessionStorage
   const [isHandlingPendingRole, setIsHandlingPendingRole] = useState(false);
 
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
@@ -82,8 +216,17 @@ function AppContent() {
 
   const principal = identity?.getPrincipal().toString() ?? "";
 
-  // Compute local data BEFORE any loading guards so we can skip the spinner
-  // when the user already has a saved profile on this device.
+  // Check admin status
+  const { data: isAdmin } = useQuery<boolean>({
+    queryKey: ["isAdmin"],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.isCallerAdmin();
+    },
+    enabled: !!actor && isAuthenticated,
+    staleTime: 60_000,
+  });
+
   const localProfileStr = localStorage.getItem(USER_PROFILE_KEY);
   const localProfileData = localProfileStr
     ? (() => {
@@ -100,7 +243,6 @@ function AppContent() {
     | "mechanic"
     | null;
 
-  // Debug log on app start — runs once on mount, snapshot of initial state
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only log
   useEffect(() => {
     const localProfile = localStorage.getItem(USER_PROFILE_KEY);
@@ -111,25 +253,21 @@ function AppContent() {
     });
   }, []);
 
-  // Background sync — silently fetch backend profile once actor is ready.
-  // Never blocks the UI; just keeps the cache warm.
   useEffect(() => {
     if (!actor || !isAuthenticated) return;
     async function syncBackend() {
       try {
         const data = await actor!.getCallerUserProfile();
         if (data) {
-          console.log("✅ Synced from backend", data);
+          console.log("\u2705 Synced from backend", data);
         }
       } catch (_e) {
-        console.warn("⚠️ Backend not ready, using local data");
+        console.warn("\u26a0\ufe0f Backend not ready, using local data");
       }
     }
     syncBackend();
   }, [actor, isAuthenticated]);
 
-  // Proactive unread chat tracking — poll messages for the current active
-  // request even before the user opens chat, so the nav badge stays accurate.
   const { data: customerActiveReq } = useCustomerActiveRequest();
   const { data: mechanicActiveJobs } = useGetServiceRequests();
   const proactiveRequestId =
@@ -140,21 +278,16 @@ function AppContent() {
         )?.id ?? null);
   const messageTrackingId = chatState?.requestId ?? proactiveRequestId;
   const { data: activeMessages } = useGetMessages(messageTrackingId);
-  // Only show badge when chat panel is closed
   const unreadChat =
     messageTrackingId && activeMessages && !chatState
       ? countUnread(activeMessages, principal)
       : 0;
 
-  // Use a stable ref to saveRoleMutation.mutate to avoid stale-closure issues
-  // in the pending-role useEffect below.
   const saveRoleMutateRef = useRef(saveRoleMutation.mutate);
   useEffect(() => {
     saveRoleMutateRef.current = saveRoleMutation.mutate;
   });
 
-  // Bug fix: handle pending-role from sessionStorage in a useEffect instead
-  // of calling the async mutation during the render phase (React anti-pattern).
   useEffect(() => {
     if (
       !userAppRole &&
@@ -194,14 +327,20 @@ function AppContent() {
       .finally(() => setSeeding(false));
   }, [actor, isAuthenticated]);
 
-  // Reset tabs to defaults whenever role changes
   useEffect(() => {
     if (userAppRole === "mechanic") {
       setMechanicTab("dashboard");
+      setAdminMechanicTab("dashboard");
     } else {
       setCustomerTab("home");
     }
   }, [userAppRole]);
+
+  const handleLogout = () => {
+    setEmailIdentity(null);
+    localStorage.removeItem("userProfile");
+    clear();
+  };
 
   const handleOpenChat = (state: ChatState) => {
     setChatState(state);
@@ -274,9 +413,6 @@ function AppContent() {
     );
   }
 
-  // Only block on loading when there is NO local data to fall back to AND
-  // the 2-second safety timeout hasn't fired yet. This prevents infinite
-  // spinners when the backend is slow or temporarily unavailable.
   if (
     (profileLoading || roleLoading || seeding || actorFetching) &&
     !localProfileStr &&
@@ -299,9 +435,6 @@ function AppContent() {
     localProfile: !!localProfileStr,
   });
 
-  // Build a fallback profile from localStorage when the backend is slow or
-  // unavailable. This lets the app render immediately on reload without
-  // waiting for the canister to respond.
   const effectiveProfile: UserProfile | null =
     profile ??
     (localProfileData && identity
@@ -325,7 +458,6 @@ function AppContent() {
         }
       : null);
 
-  // Prefer backend role, fall back to localStorage role — never block on this.
   const effectiveRole =
     (userAppRole as "customer" | "mechanic" | undefined) ||
     localRole ||
@@ -335,14 +467,12 @@ function AppContent() {
     (effectiveProfile === null || effectiveProfile === undefined) &&
     !localProfileStr
   ) {
-    // Genuinely new user — no profile anywhere.
     return (
       <OnboardingScreen
         role={selectedRole}
         onComplete={async (data) => {
           console.log("Saving user profile:", data);
 
-          // Require a valid authenticated actor — no anonymous fallback.
           if (!actor || !identity) {
             throw new Error(
               "Not connected. Please sign in with Internet Identity and try again.",
@@ -375,7 +505,6 @@ function AppContent() {
           queryClient.setQueryData(["userAppRole", principal], roleToSave);
           queryClient.setQueryData(["profile"], profileData);
 
-          // Persist locally so app starts instantly on reload
           localStorage.setItem(
             USER_PROFILE_KEY,
             JSON.stringify({
@@ -393,20 +522,21 @@ function AppContent() {
             sessionStorage.removeItem("pending-role");
           }
 
-          console.log("✅ Profile saved to backend successfully");
+          console.log("\u2705 Profile saved to backend successfully");
+
+          if (roleToSave === "mechanic") {
+            toast.info(
+              "Your account is pending review. You will be notified when approved.",
+              { duration: 5000 },
+            );
+          }
         }}
         isSaving={saveProfileMutation.isPending}
       />
     );
   }
 
-  // NOTE: The "Loading your account..." spinner that previously appeared when
-  // profile===null && localProfileStr existed has been intentionally removed.
-  // effectiveProfile now provides an immediate fallback from localStorage so
-  // the app renders instantly instead of spinning forever.
-
   if (!effectiveRole) {
-    // Show spinner while the pending-role useEffect is running
     if (isHandlingPendingRole || !!sessionStorage.getItem("pending-role")) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-background">
@@ -428,6 +558,28 @@ function AppContent() {
       />
     );
   }
+
+  // ---- Mechanic Verification Gate ----
+  // Admins bypass the gate so they can still access the dashboard + admin panel.
+  if (effectiveRole === "mechanic" && !isAdmin) {
+    const verificationStatus =
+      (effectiveProfile as any)?.verificationStatus ?? "pending";
+
+    if (verificationStatus === "pending") {
+      return <MechanicPendingGate onLogout={handleLogout} />;
+    }
+
+    if (verificationStatus === "rejected") {
+      return <MechanicRejectedGate onLogout={handleLogout} />;
+    }
+    // "approved" falls through to normal dashboard
+  }
+
+  // ---- Render App ----
+  const isMechanicAdmin = effectiveRole === "mechanic" && !!isAdmin;
+
+  // For admin mechanics: derive which content to show from adminMechanicTab
+  const currentMechanicView = isMechanicAdmin ? adminMechanicTab : mechanicTab;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -461,12 +613,13 @@ function AppContent() {
               )}
             </>
           )}
+
           {effectiveRole === "mechanic" && (
             <>
-              {mechanicTab === "dashboard" && (
+              {currentMechanicView === "dashboard" && (
                 <MechanicDashboard profile={effectiveProfile!} />
               )}
-              {mechanicTab === "jobs" && (
+              {currentMechanicView === "jobs" && (
                 <MechanicJobsTab
                   profile={effectiveProfile!}
                   onOpenChat={(requestId, otherPartyName, otherPartyId) =>
@@ -479,18 +632,22 @@ function AppContent() {
                   }
                 />
               )}
-              {mechanicTab === "earnings" && <MechanicEarningsTab />}
-              {mechanicTab === "profile" && (
+              {currentMechanicView === "earnings" && <MechanicEarningsTab />}
+              {currentMechanicView === "profile" && (
                 <ProfileTab
                   profile={effectiveProfile!}
                   onSave={handleSaveProfile}
                   isSaving={saveProfileMutation.isPending}
                 />
               )}
+              {isMechanicAdmin && currentMechanicView === "admin" && (
+                <AdminPanel />
+              )}
             </>
           )}
         </div>
       </div>
+
       {chatState && (
         <div className="fixed inset-0 z-[60] bg-background">
           <div className="w-full max-w-[430px] mx-auto h-full">
@@ -505,6 +662,7 @@ function AppContent() {
           </div>
         </div>
       )}
+
       <div className="flex justify-center">
         <div className="w-full max-w-[430px]">
           {effectiveRole === "customer" && (
@@ -514,7 +672,14 @@ function AppContent() {
               badges={{ bookings: unreadChat }}
             />
           )}
-          {effectiveRole === "mechanic" && (
+          {effectiveRole === "mechanic" && isMechanicAdmin && (
+            <AdminMechanicBottomNav
+              activeTab={adminMechanicTab}
+              onTabChange={setAdminMechanicTab}
+              badges={{ jobs: unreadChat }}
+            />
+          )}
+          {effectiveRole === "mechanic" && !isMechanicAdmin && (
             <MechanicBottomNav
               activeTab={mechanicTab}
               onTabChange={setMechanicTab}

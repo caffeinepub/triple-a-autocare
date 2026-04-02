@@ -93,7 +93,24 @@ actor {
     specialties : ?Text;
   };
 
-  // V4 — current UserProfile with rating aggregates
+  // V4 — kept for migration only
+  type UserProfileV4 = {
+    userId : Principal;
+    name : Text;
+    location : Text;
+    phone : Text;
+    latitude : ?Float;
+    longitude : ?Float;
+    address : ?Text;
+    profileImage : ?Text;
+    role : ?Text;
+    yearsOfExperience : ?Nat;
+    specialties : ?Text;
+    totalRatings : Nat;
+    ratingsSum : Nat;
+  };
+
+  // V5 — current UserProfile with mechanic verification status
   public type UserProfile = {
     userId : Principal;
     name : Text;
@@ -108,6 +125,7 @@ actor {
     specialties : ?Text;
     totalRatings : Nat;
     ratingsSum : Nat;
+    verificationStatus : ?Text;
   };
 
   // V1 — original deployed type
@@ -254,8 +272,10 @@ actor {
   let userProfilesV2 = Map.empty<Principal, UserProfileV2>();
   // V3 stable storage — kept for migration to V4
   let userProfilesV3 = Map.empty<Principal, UserProfileV3>();
-  // V4 stable storage — current version with totalRatings, ratingsSum
-  let userProfilesV4 = Map.empty<Principal, UserProfile>();
+  // V4 stable storage — kept for migration to V5
+  let userProfilesV4 = Map.empty<Principal, UserProfileV4>();
+  // V5 stable storage — current version with verificationStatus
+  let userProfilesV5 = Map.empty<Principal, UserProfile>();
 
   // V1 stable storage — kept for migration only
   let serviceRequests = Map.empty<Text, ServiceRequestV1>();
@@ -334,9 +354,9 @@ actor {
       };
     };
 
-    // Migrate UserProfile V1 → V4
+    // Migrate UserProfile V1 → V5
     for (p in userProfiles.values()) {
-      if (userProfilesV4.get(p.userId) == null) {
+      if (userProfilesV5.get(p.userId) == null) {
         let migrated : UserProfile = {
           userId = p.userId;
           name = p.name;
@@ -351,14 +371,15 @@ actor {
           specialties = null;
           totalRatings = 0;
           ratingsSum = 0;
+          verificationStatus = ?"approved";
         };
-        userProfilesV4.add(p.userId, migrated);
+        userProfilesV5.add(p.userId, migrated);
       };
     };
 
-    // Migrate UserProfile V2 → V4
+    // Migrate UserProfile V2 → V5
     for (p in userProfilesV2.values()) {
-      if (userProfilesV4.get(p.userId) == null) {
+      if (userProfilesV5.get(p.userId) == null) {
         let migrated : UserProfile = {
           userId = p.userId;
           name = p.name;
@@ -373,14 +394,15 @@ actor {
           specialties = null;
           totalRatings = 0;
           ratingsSum = 0;
+          verificationStatus = ?"approved";
         };
-        userProfilesV4.add(p.userId, migrated);
+        userProfilesV5.add(p.userId, migrated);
       };
     };
 
-    // Migrate UserProfile V3 → V4
+    // Migrate UserProfile V3 → V5
     for (p in userProfilesV3.values()) {
-      if (userProfilesV4.get(p.userId) == null) {
+      if (userProfilesV5.get(p.userId) == null) {
         let migrated : UserProfile = {
           userId = p.userId;
           name = p.name;
@@ -395,8 +417,36 @@ actor {
           specialties = p.specialties;
           totalRatings = 0;
           ratingsSum = 0;
+          verificationStatus = ?"approved";
         };
-        userProfilesV4.add(p.userId, migrated);
+        userProfilesV5.add(p.userId, migrated);
+      };
+    };
+
+    // Migrate UserProfile V4 → V5 (add verificationStatus)
+    for (p in userProfilesV4.values()) {
+      if (userProfilesV5.get(p.userId) == null) {
+        let defaultStatus : ?Text = switch (p.role) {
+          case (?r) { if (Text.equal(r, "mechanic")) { ?"pending" } else { ?"approved" } };
+          case (null) { ?"approved" };
+        };
+        let migrated : UserProfile = {
+          userId = p.userId;
+          name = p.name;
+          location = p.location;
+          phone = p.phone;
+          latitude = p.latitude;
+          longitude = p.longitude;
+          address = p.address;
+          profileImage = p.profileImage;
+          role = p.role;
+          yearsOfExperience = p.yearsOfExperience;
+          specialties = p.specialties;
+          totalRatings = p.totalRatings;
+          ratingsSum = p.ratingsSum;
+          verificationStatus = defaultStatus;
+        };
+        userProfilesV5.add(p.userId, migrated);
       };
     };
 
@@ -471,14 +521,18 @@ actor {
 
   };
 
-  // Helper: get V4 profile for a user, with lazy migration from older versions
+  // Helper: get current profile for a user, with lazy migration from older versions
   func getProfileV3(userId : Principal) : ?UserProfile {
-    switch (userProfilesV4.get(userId)) {
+    switch (userProfilesV5.get(userId)) {
       case (?p) { ?p };
       case (null) {
-        // lazy migrate from V3
-        switch (userProfilesV3.get(userId)) {
+        // lazy migrate from V4
+        switch (userProfilesV4.get(userId)) {
           case (?p) {
+            let defaultStatus : ?Text = switch (p.role) {
+              case (?r) { if (Text.equal(r, "mechanic")) { ?"pending" } else { ?"approved" } };
+              case (null) { ?"approved" };
+            };
             let migrated : UserProfile = {
               userId = p.userId;
               name = p.name;
@@ -491,12 +545,41 @@ actor {
               role = p.role;
               yearsOfExperience = p.yearsOfExperience;
               specialties = p.specialties;
-              totalRatings = 0;
-              ratingsSum = 0;
+              totalRatings = p.totalRatings;
+              ratingsSum = p.ratingsSum;
+              verificationStatus = defaultStatus;
             };
             ?migrated;
           };
-          case (null) { null };
+          case (null) {
+            // lazy migrate from V3
+            switch (userProfilesV3.get(userId)) {
+              case (?p) {
+                let defaultStatus : ?Text = switch (p.role) {
+                  case (?r) { if (Text.equal(r, "mechanic")) { ?"pending" } else { ?"approved" } };
+                  case (null) { ?"approved" };
+                };
+                let migrated : UserProfile = {
+                  userId = p.userId;
+                  name = p.name;
+                  location = p.location;
+                  phone = p.phone;
+                  latitude = p.latitude;
+                  longitude = p.longitude;
+                  address = p.address;
+                  profileImage = p.profileImage;
+                  role = p.role;
+                  yearsOfExperience = p.yearsOfExperience;
+                  specialties = p.specialties;
+                  totalRatings = 0;
+                  ratingsSum = 0;
+                  verificationStatus = defaultStatus;
+                };
+                ?migrated;
+              };
+              case (null) { null };
+            };
+          };
         };
       };
     };
@@ -637,13 +720,36 @@ actor {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
     let existing = getProfileV3(caller);
+    // Auto-set verificationStatus: mechanics start as pending, others as approved
+    let verificationStatus : ?Text = switch (existing) {
+      case (?p) {
+        // Preserve existing verificationStatus if already set
+        switch (p.verificationStatus) {
+          case (?s) { ?s };
+          case (null) {
+            switch (profile.role) {
+              case (?r) { if (Text.equal(r, "mechanic")) { ?"pending" } else { ?"approved" } };
+              case (null) { ?"approved" };
+            };
+          };
+        };
+      };
+      case (null) {
+        // New user — set based on role
+        switch (profile.role) {
+          case (?r) { if (Text.equal(r, "mechanic")) { ?"pending" } else { ?"approved" } };
+          case (null) { ?"approved" };
+        };
+      };
+    };
     let updatedProfile : UserProfile = {
       profile with
       userId = caller;
       totalRatings = switch (existing) { case (?p) { p.totalRatings }; case (null) { 0 } };
       ratingsSum = switch (existing) { case (?p) { p.ratingsSum }; case (null) { 0 } };
+      verificationStatus = verificationStatus;
     };
-    userProfilesV4.add(caller, updatedProfile);
+    userProfilesV5.add(caller, updatedProfile);
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
@@ -682,6 +788,7 @@ actor {
           specialties = null;
           totalRatings = 0;
           ratingsSum = 0;
+          verificationStatus = null;
         }
       };
     };
@@ -715,10 +822,23 @@ actor {
       } else { null };
       totalRatings = existing.totalRatings;
       ratingsSum = existing.ratingsSum;
+      verificationStatus = existing.verificationStatus;
     };
 
-    userProfilesV4.add(caller, updated);
-    updated;
+    // Preserve verificationStatus or set based on role
+    let verificationStatus : ?Text = switch (existing.verificationStatus) {
+      case (?s) { ?s };
+      case (null) {
+        switch (storedRole) {
+          case (?r) { if (Text.equal(r, "mechanic")) { ?"pending" } else { ?"approved" } };
+          case (null) { ?"approved" };
+        };
+      };
+    };
+
+    let updatedWithStatus : UserProfile = { updated with verificationStatus = verificationStatus };
+    userProfilesV5.add(caller, updatedWithStatus);
+    updatedWithStatus;
   };
 
   public query ({ caller }) func getMechanicPublicProfile(mechanicId : Principal) : async ?UserProfile {
@@ -935,6 +1055,20 @@ actor {
       Runtime.trap("Unauthorized: Only users can view searching requests");
     };
 
+    // Block unverified mechanics from seeing job requests
+    switch (getProfileV3(caller)) {
+      case (?p) {
+        let isM = switch (p.role) { case (?r) { Text.equal(r, "mechanic") }; case (null) { false } };
+        if (isM) {
+          let vs = switch (p.verificationStatus) { case (?s) { s }; case (null) { "pending" } };
+          if (not Text.equal(vs, "approved")) {
+            return [];
+          };
+        };
+      };
+      case (null) {};
+    };
+
     let searchingRequests = serviceRequestsV5.values().filter(
       func(r) { r.status == #searching }
     );
@@ -949,6 +1083,19 @@ actor {
   public shared ({ caller }) func acceptServiceRequest(requestId : Text, mechanicName : Text) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can accept service requests");
+    };
+
+    // Block unverified mechanics from accepting jobs
+    switch (getProfileV3(caller)) {
+      case (?p) {
+        let vs = switch (p.verificationStatus) { case (?s) { s }; case (null) { "pending" } };
+        if (not Text.equal(vs, "approved")) {
+          Runtime.trap("Your account is pending approval. You cannot accept jobs yet.");
+        };
+      };
+      case (null) {
+        Runtime.trap("Your account is pending approval. You cannot accept jobs yet.");
+      };
     };
 
     // Enforce single active job per mechanic
@@ -1379,6 +1526,7 @@ actor {
                 specialties = null;
                 totalRatings = 0;
                 ratingsSum = 0;
+                verificationStatus = ?"approved";
               }
             };
           };
@@ -1387,7 +1535,7 @@ actor {
             totalRatings = mechanicProfile.totalRatings + 1;
             ratingsSum = mechanicProfile.ratingsSum + rating;
           };
-          userProfilesV4.add(mechanicId, updatedMechanic);
+          userProfilesV5.add(mechanicId, updatedMechanic);
         };
         case (null) {};
       };
@@ -1419,6 +1567,7 @@ actor {
             specialties = null;
             totalRatings = 0;
             ratingsSum = 0;
+            verificationStatus = ?"approved";
           }
         };
       };
@@ -1427,9 +1576,40 @@ actor {
         totalRatings = customerProfile.totalRatings + 1;
         ratingsSum = customerProfile.ratingsSum + rating;
       };
-      userProfilesV4.add(request.customerId, updatedCustomer);
+      userProfilesV5.add(request.customerId, updatedCustomer);
     } else {
       Runtime.trap("Invalid raterRole — must be 'customer' or 'mechanic'");
     };
   };
+
+  public query ({ caller }) func getAllMechanics() : async [UserProfile] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Admin only");
+    };
+    let allProfiles = userProfilesV5.values().filter(
+      func(p) {
+        switch (p.role) {
+          case (?r) { Text.equal(r, "mechanic") };
+          case (null) { false };
+        }
+      }
+    );
+    allProfiles.toArray();
+  };
+
+  public shared ({ caller }) func updateMechanicVerificationStatus(mechanicId : Principal, status : Text) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Admin only");
+    };
+    if (not Text.equal(status, "approved") and not Text.equal(status, "pending") and not Text.equal(status, "rejected")) {
+      Runtime.trap("Invalid status — must be 'approved', 'pending', or 'rejected'");
+    };
+    let profile = switch (getProfileV3(mechanicId)) {
+      case (?p) { p };
+      case (null) { Runtime.trap("Mechanic profile not found") };
+    };
+    let updated = { profile with verificationStatus = ?status };
+    userProfilesV5.add(mechanicId, updated);
+  };
+
 };

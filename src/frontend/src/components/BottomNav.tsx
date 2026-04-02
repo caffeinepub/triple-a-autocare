@@ -3,6 +3,7 @@ import {
   CalendarDays,
   DollarSign,
   Home,
+  Shield,
   ShoppingBag,
   User,
   Wrench,
@@ -10,6 +11,12 @@ import {
 
 export type CustomerTab = "home" | "bookings" | "marketplace" | "profile";
 export type MechanicTab = "dashboard" | "jobs" | "earnings" | "profile";
+export type AdminMechanicTab =
+  | "dashboard"
+  | "jobs"
+  | "earnings"
+  | "profile"
+  | "admin";
 
 const CUSTOMER_TABS: { id: CustomerTab; label: string; icon: typeof Home }[] = [
   { id: "home", label: "Home", icon: Home },
@@ -23,6 +30,18 @@ const MECHANIC_TABS: { id: MechanicTab; label: string; icon: typeof Home }[] = [
   { id: "jobs", label: "Jobs", icon: Briefcase },
   { id: "earnings", label: "Earnings", icon: DollarSign },
   { id: "profile", label: "Profile", icon: User },
+];
+
+const ADMIN_MECHANIC_TABS: {
+  id: AdminMechanicTab;
+  label: string;
+  icon: typeof Home;
+}[] = [
+  { id: "dashboard", label: "Dashboard", icon: Wrench },
+  { id: "jobs", label: "Jobs", icon: Briefcase },
+  { id: "earnings", label: "Earnings", icon: DollarSign },
+  { id: "profile", label: "Profile", icon: User },
+  { id: "admin", label: "Admin", icon: Shield },
 ];
 
 function NavBar<T extends string>({
@@ -116,4 +135,23 @@ export function MechanicBottomNav({
   );
 }
 
-// Legacy default export removed — use CustomerBottomNav or MechanicBottomNav
+export function AdminMechanicBottomNav({
+  activeTab,
+  onTabChange,
+  badges,
+}: {
+  activeTab: AdminMechanicTab;
+  onTabChange: (tab: AdminMechanicTab) => void;
+  badges?: Partial<Record<AdminMechanicTab, number>>;
+}) {
+  return (
+    <NavBar
+      tabs={ADMIN_MECHANIC_TABS}
+      activeTab={activeTab}
+      onTabChange={onTabChange}
+      badges={badges}
+    />
+  );
+}
+
+// Legacy default export removed — use CustomerBottomNav, MechanicBottomNav, or AdminMechanicBottomNav
