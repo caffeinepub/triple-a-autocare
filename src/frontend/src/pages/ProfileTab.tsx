@@ -1,5 +1,13 @@
 import type { Principal } from "@icp-sdk/core/principal";
-import { Camera, Loader2, LogOut, Shield, Star, Wrench } from "lucide-react";
+import {
+  Camera,
+  Copy,
+  Loader2,
+  LogOut,
+  Shield,
+  Star,
+  Wrench,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -127,15 +135,28 @@ export default function ProfileTab({ profile, isAdmin, onAdminPanel }: Props) {
     .join("")
     .toUpperCase();
 
-  const principal = (identity?.getPrincipal() as unknown as Principal)
-    ?.toString()
-    ?.slice(0, 16);
+  // Full principal for display and copy
+  const fullPrincipal =
+    (identity?.getPrincipal() as unknown as Principal)?.toString() ?? "";
 
   const roleBadge = isMechanic
     ? "Mechanic"
     : userAppRole === "customer"
       ? "Customer"
       : null;
+
+  const handleCopyPrincipal = () => {
+    if (!fullPrincipal) return;
+    navigator.clipboard
+      .writeText(fullPrincipal)
+      .then(() => {
+        toast.success("Principal ID copied!");
+      })
+      .catch(() => {
+        // fallback for browsers that don't support clipboard API
+        toast.info(`Your principal: ${fullPrincipal}`);
+      });
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -224,13 +245,26 @@ export default function ProfileTab({ profile, isAdmin, onAdminPanel }: Props) {
                 {roleBadge}
               </span>
             )}
-            {principal && (
-              <p className="text-muted-foreground text-xs mt-1">
-                {principal}...
-              </p>
+
+            {/* Full principal with copy button */}
+            {fullPrincipal && (
+              <button
+                type="button"
+                onClick={handleCopyPrincipal}
+                className="mt-2 flex items-center gap-1.5 mx-auto px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors"
+              >
+                <span
+                  className="text-muted-foreground text-xs font-mono break-all text-left"
+                  style={{ maxWidth: 220 }}
+                >
+                  {fullPrincipal}
+                </span>
+                <Copy className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              </button>
             )}
+
             {/* Rating stats */}
-            <div className="flex items-center gap-4 mt-1">
+            <div className="flex items-center gap-4 mt-2">
               {ratingData ? (
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
