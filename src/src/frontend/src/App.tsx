@@ -191,7 +191,6 @@ function AppContent() {
   const [mechanicTab, setMechanicTab] = useState<MechanicTab>("dashboard");
   const [adminMechanicTab, setAdminMechanicTab] =
     useState<AdminMechanicTab>("dashboard");
-  const [showCustomerAdminPanel, setShowCustomerAdminPanel] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const queryClient = useQueryClient();
   const [chatState, setChatState] = useState<ChatState | null>(null);
@@ -578,7 +577,6 @@ function AppContent() {
 
   // ---- Render App ----
   const isMechanicAdmin = effectiveRole === "mechanic" && !!isAdmin;
-  const isCustomerAdmin = effectiveRole === "customer" && !!isAdmin;
 
   // For admin mechanics: derive which content to show from adminMechanicTab
   const currentMechanicView = isMechanicAdmin ? adminMechanicTab : mechanicTab;
@@ -589,10 +587,10 @@ function AppContent() {
         <div className="w-full max-w-[430px] relative pb-20">
           {effectiveRole === "customer" && (
             <>
-              {customerTab === "home" && !showCustomerAdminPanel && (
+              {customerTab === "home" && (
                 <HomeTab profile={effectiveProfile!} />
               )}
-              {customerTab === "bookings" && !showCustomerAdminPanel && (
+              {customerTab === "bookings" && (
                 <BookingsTab
                   profile={effectiveProfile!}
                   onOpenChat={(requestId, otherPartyName, otherPartyId) =>
@@ -605,20 +603,13 @@ function AppContent() {
                   }
                 />
               )}
-              {customerTab === "marketplace" && !showCustomerAdminPanel && (
-                <MarketplaceTab />
-              )}
-              {customerTab === "profile" && !showCustomerAdminPanel && (
+              {customerTab === "marketplace" && <MarketplaceTab />}
+              {customerTab === "profile" && (
                 <ProfileTab
                   profile={effectiveProfile!}
                   onSave={handleSaveProfile}
                   isSaving={saveProfileMutation.isPending}
-                  isAdmin={!!isAdmin}
-                  onAdminPanel={() => setShowCustomerAdminPanel(true)}
                 />
-              )}
-              {isCustomerAdmin && showCustomerAdminPanel && (
-                <AdminPanel onBack={() => setShowCustomerAdminPanel(false)} />
               )}
             </>
           )}
@@ -679,10 +670,7 @@ function AppContent() {
           {effectiveRole === "customer" && (
             <CustomerBottomNav
               activeTab={customerTab}
-              onTabChange={(tab) => {
-                setShowCustomerAdminPanel(false);
-                setCustomerTab(tab);
-              }}
+              onTabChange={setCustomerTab}
               badges={{ bookings: unreadChat }}
             />
           )}

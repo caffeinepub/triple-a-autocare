@@ -1,7 +1,6 @@
 import type { Principal } from "@icp-sdk/core/principal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ChevronLeft,
   Loader2,
   MapPin,
   Shield,
@@ -166,7 +165,7 @@ function MechanicCard({
   );
 }
 
-export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
+export default function AdminPanel() {
   const { actor: rawActor } = useActor();
   const actor = rawActor as unknown as AdminBackendInterface | null;
   const queryClient = useQueryClient();
@@ -238,16 +237,6 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
   return (
     <div className="flex flex-col min-h-full">
       <header className="px-5 pt-12 pb-5 bg-gradient-to-b from-card to-background">
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground mb-4 text-sm font-medium transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back to Profile
-          </button>
-        )}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center">
             <Shield className="w-5 h-5 text-primary" />
