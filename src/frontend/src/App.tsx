@@ -217,14 +217,21 @@ function AppContent() {
 
   const principal = identity?.getPrincipal().toString() ?? "";
 
-  // Check admin status
+  // Check admin status — backend check + hardcoded admin principal fallback
+  const ADMIN_PRINCIPAL =
+    "ostvh-u2bau-zuz6r-6gipc-yqwo6-d6dvx-hrwdn-qvdzk-irsyx-wairt-kqe";
   const { data: isAdmin } = useQuery<boolean>({
-    queryKey: ["isAdmin"],
+    queryKey: ["isAdmin", principal],
     queryFn: async () => {
+      if (principal === ADMIN_PRINCIPAL) return true;
       if (!actor) return false;
-      return actor.isCallerAdmin();
+      try {
+        return await actor.isCallerAdmin();
+      } catch {
+        return false;
+      }
     },
-    enabled: !!actor && isAuthenticated,
+    enabled: isAuthenticated,
     staleTime: 60_000,
   });
 
