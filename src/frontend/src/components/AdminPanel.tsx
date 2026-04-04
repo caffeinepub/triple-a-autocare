@@ -176,11 +176,20 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
     data: mechanics,
     isLoading,
     isError,
+    error,
   } = useQuery<MechanicProfile[]>({
     queryKey: ["admin", "mechanics"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllMechanics() as Promise<MechanicProfile[]>;
+      if (!actor) throw new Error("Actor not ready");
+      try {
+        const result = await (actor.getAllMechanics() as Promise<
+          MechanicProfile[]
+        >);
+        return result;
+      } catch (err) {
+        console.error("ADMIN ERROR:", err);
+        throw err;
+      }
     },
     enabled: !!actor,
     refetchInterval: 10_000,
@@ -198,7 +207,7 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
       ]);
       toast.success("Mechanic approved");
     } catch (err) {
-      console.error("[AdminPanel] Approve error:", err);
+      console.error("ADMIN ERROR:", err);
       toast.error("Failed to approve mechanic");
     } finally {
       setUpdatingId(null);
@@ -217,7 +226,7 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
       ]);
       toast.success("Mechanic rejected");
     } catch (err) {
-      console.error("[AdminPanel] Reject error:", err);
+      console.error("ADMIN ERROR:", err);
       toast.error("Failed to reject mechanic");
     } finally {
       setUpdatingId(null);
@@ -234,6 +243,123 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
     (m) => m.verificationStatus === "rejected",
   );
   const others = [...approved, ...rejected];
+
+  const renderBody = () => {
+    if (isLoading) {
+      return (
+        <div
+          data-ocid="admin.mechanics.loading_state"
+          className="flex flex-col items-center justify-center py-20 gap-3"
+        >
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground text-sm">Loading mechanics...</p>
+        </div>
+      );
+    }
+
+    if (isError) {
+      const errMsg = (error as Error)?.message ?? "";
+      // Actor not ready yet — show connecting spinner instead of error
+      if (!actor || errMsg === "Actor not ready") {
+        return (
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-muted-foreground text-sm">
+              Connecting to backend...
+            </p>
+          </div>
+        );
+      }
+      // Real network/backend failure
+      return (
+        <div
+          data-ocid="admin.mechanics.error_state"
+          className="flex flex-col items-center justify-center py-16 gap-3 text-center"
+        >
+          <XCircle className="w-10 h-10 text-red-400" />
+          <p className="text-foreground font-semibold">
+            Failed to load mechanics
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Check your connection and try again
+          </p>
+        </div>
+      );
+    }
+
+    if (!mechanics || mechanics.length === 0) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          data-ocid="admin.mechanics.empty_state"
+          className="flex flex-col items-center justify-center py-20 gap-4 text-center"
+        >
+          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
+            <Wrench className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-foreground font-semibold text-lg">
+              No mechanics yet
+            </p>
+            <p className="text-muted-foreground text-sm mt-1">
+              No mechanics have signed up yet.
+            </p>
+          </div>
+        </motion.div>
+      );
+    }
+
+    return (
+      <>
+        {pending.length > 0 && (
+          <>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-foreground">
+                Pending Review
+              </h2>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
+                {pending.length}
+              </span>
+            </div>
+            {pending.map((mechanic, i) => (
+              <MechanicCard
+                key={mechanic.userId.toString()}
+                mechanic={mechanic}
+                index={i}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                isUpdating={updatingId === mechanic.userId.toString()}
+              />
+            ))}
+          </>
+        )}
+
+        {others.length > 0 && (
+          <>
+            <div className="flex items-center gap-2 mt-2">
+              <h2 className="text-base font-bold text-foreground">
+                All Mechanics
+              </h2>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                {others.length}
+              </span>
+            </div>
+            {others.map((mechanic, i) => (
+              <MechanicCard
+                key={mechanic.userId.toString()}
+                mechanic={mechanic}
+                index={pending.length + i}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                isUpdating={updatingId === mechanic.userId.toString()}
+              />
+            ))}
+          </>
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="flex flex-col min-h-full">
@@ -286,99 +412,7 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
         )}
       </header>
 
-      <div className="flex flex-col gap-4 px-5 pb-8">
-        {isLoading ? (
-          <div
-            data-ocid="admin.mechanics.loading_state"
-            className="flex flex-col items-center justify-center py-20 gap-3"
-          >
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-muted-foreground text-sm">
-              Loading mechanics...
-            </p>
-          </div>
-        ) : isError ? (
-          <div
-            data-ocid="admin.mechanics.error_state"
-            className="flex flex-col items-center justify-center py-16 gap-3 text-center"
-          >
-            <XCircle className="w-10 h-10 text-red-400" />
-            <p className="text-foreground font-semibold">
-              Failed to load mechanics
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Please check your connection
-            </p>
-          </div>
-        ) : !mechanics || mechanics.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            data-ocid="admin.mechanics.empty_state"
-            className="flex flex-col items-center justify-center py-20 gap-4 text-center"
-          >
-            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
-              <Wrench className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-foreground font-semibold text-lg">
-                No mechanics yet
-              </p>
-              <p className="text-muted-foreground text-sm mt-1">
-                No mechanics have signed up yet.
-              </p>
-            </div>
-          </motion.div>
-        ) : (
-          <>
-            {pending.length > 0 && (
-              <>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-foreground">
-                    Pending Review
-                  </h2>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
-                    {pending.length}
-                  </span>
-                </div>
-                {pending.map((mechanic, i) => (
-                  <MechanicCard
-                    key={mechanic.userId.toString()}
-                    mechanic={mechanic}
-                    index={i}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                    isUpdating={updatingId === mechanic.userId.toString()}
-                  />
-                ))}
-              </>
-            )}
-
-            {others.length > 0 && (
-              <>
-                <div className="flex items-center gap-2 mt-2">
-                  <h2 className="text-base font-bold text-foreground">
-                    All Mechanics
-                  </h2>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                    {others.length}
-                  </span>
-                </div>
-                {others.map((mechanic, i) => (
-                  <MechanicCard
-                    key={mechanic.userId.toString()}
-                    mechanic={mechanic}
-                    index={pending.length + i}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                    isUpdating={updatingId === mechanic.userId.toString()}
-                  />
-                ))}
-              </>
-            )}
-          </>
-        )}
-      </div>
+      <div className="flex flex-col gap-4 px-5 pb-8">{renderBody()}</div>
 
       <div className="px-5 pb-6 mt-auto">
         <p className="text-muted-foreground text-xs text-center">
