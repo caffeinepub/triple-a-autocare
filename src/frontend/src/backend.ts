@@ -844,7 +844,7 @@ export class Backend implements backendInterface {
     }
     async getAllMechanics(): Promise<Array<UserProfile>> {
         const result = await (this.actor as any).getAllMechanics();
-        return result.map((p: any) => from_candid_UserProfile_record(this.uploadFile, this.downloadFile, p));
+        return result.map((p: any) => from_candid_UserProfile_record(this._uploadFile, this._downloadFile, p));
     }
     async updateMechanicVerificationStatus(mechanicId: import("@icp-sdk/core/principal").Principal, status: string): Promise<void> {
         await (this.actor as any).updateMechanicVerificationStatus(mechanicId, status);

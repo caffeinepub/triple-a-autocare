@@ -13,15 +13,15 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile, backendInterface } from "../backend";
+import type { UserProfile } from "../backend";
 import { useActor } from "../hooks/useActor";
 
-// Extend UserProfile locally to include verificationStatus (added by backend but not yet in TS interface)
 type MechanicProfile = UserProfile & { verificationStatus?: string };
 
-// Extend backendInterface locally to include admin methods
-interface AdminBackendInterface extends backendInterface {
-  getAllMechanics(): Promise<Array<MechanicProfile>>;
+// These two methods exist on the Backend class but are missing from the backendInterface type.
+// We extend with just the missing signatures so we can call them without (actor as any).
+interface WithAdminMethods {
+  getAllMechanics(): Promise<Array<UserProfile>>;
   updateMechanicVerificationStatus(
     mechanicId: Principal,
     status: string,
@@ -168,7 +168,9 @@ function MechanicCard({
 
 export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
   const { actor: rawActor } = useActor();
-  const actor = rawActor as unknown as AdminBackendInterface | null;
+  // Cast to include admin methods that exist on the Backend class but are
+  // missing from the backendInterface type declaration (backend.ts is read-only).
+  const actor = rawActor as (typeof rawActor & WithAdminMethods) | null;
   const queryClient = useQueryClient();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -180,14 +182,13 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
   } = useQuery<MechanicProfile[]>({
     queryKey: ["admin", "mechanics"],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not ready");
+      if (!actor) return [];
       try {
-        const result = await (actor.getAllMechanics() as Promise<
-          MechanicProfile[]
-        >);
-        return result;
+        const all = await actor.getAllMechanics();
+        console.log("Mechanics:", all);
+        return all.filter((m) => m.role === "mechanic") as MechanicProfile[];
       } catch (err) {
-        console.error("ADMIN ERROR:", err);
+        console.error("Admin mechanics error:", err);
         throw err;
       }
     },
@@ -207,7 +208,7 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
       ]);
       toast.success("Mechanic approved");
     } catch (err) {
-      console.error("ADMIN ERROR:", err);
+      console.error("Admin mechanics error:", err);
       toast.error("Failed to approve mechanic");
     } finally {
       setUpdatingId(null);
@@ -226,7 +227,7 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
       ]);
       toast.success("Mechanic rejected");
     } catch (err) {
-      console.error("ADMIN ERROR:", err);
+      console.error("Admin mechanics error:", err);
       toast.error("Failed to reject mechanic");
     } finally {
       setUpdatingId(null);
@@ -244,6 +245,13 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
   );
   const others = [...approved, ...rejected];
 
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : error
+        ? String(error)
+        : "Unexpected error";
+
   const renderBody = () => {
     if (isLoading) {
       return (
@@ -258,19 +266,6 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
     }
 
     if (isError) {
-      const errMsg = (error as Error)?.message ?? "";
-      // Actor not ready yet — show connecting spinner instead of error
-      if (!actor || errMsg === "Actor not ready") {
-        return (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-muted-foreground text-sm">
-              Connecting to backend...
-            </p>
-          </div>
-        );
-      }
-      // Real network/backend failure
       return (
         <div
           data-ocid="admin.mechanics.error_state"
@@ -280,8 +275,8 @@ export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
           <p className="text-foreground font-semibold">
             Failed to load mechanics
           </p>
-          <p className="text-muted-foreground text-sm">
-            Check your connection and try again
+          <p className="text-muted-foreground text-sm break-words max-w-xs">
+            {errorMessage}
           </p>
         </div>
       );
