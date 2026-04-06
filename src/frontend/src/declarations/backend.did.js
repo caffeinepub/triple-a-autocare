@@ -62,6 +62,7 @@ export const UserProfile = IDL.Record({
   'specialties' : IDL.Opt(IDL.Text),
   'totalRatings' : IDL.Nat,
   'ratingsSum' : IDL.Nat,
+  'verificationStatus' : IDL.Opt(IDL.Text),
 });
 export const ServiceRequest = IDL.Record({
   'id' : IDL.Text,
@@ -129,6 +130,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'customerRespondToPrice' : IDL.Func([IDL.Text, IDL.Bool], [], []),
+  'getAllMechanics' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
   'getAllParts' : IDL.Func([], [IDL.Vec(Part)], ['query']),
   'getAvailableMechanics' : IDL.Func([], [IDL.Vec(Mechanic)], ['query']),
   'getBooking' : IDL.Func([IDL.Text], [Booking], ['query']),
@@ -177,6 +179,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'submitRating' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
+  'updateMechanicVerificationStatus' : IDL.Func([IDL.Principal, IDL.Text], [], []),
   'updateServiceRequest' : IDL.Func(
       [
         IDL.Text,
@@ -263,6 +266,7 @@ export const idlFactory = ({ IDL }) => {
     'specialties' : IDL.Opt(IDL.Text),
     'totalRatings' : IDL.Nat,
     'ratingsSum' : IDL.Nat,
+    'verificationStatus' : IDL.Opt(IDL.Text),
   });
   const ServiceRequest = IDL.Record({
     'id' : IDL.Text,
@@ -329,6 +333,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'customerRespondToPrice' : IDL.Func([IDL.Text, IDL.Bool], [], []),
+    'getAllMechanics' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
     'getAllParts' : IDL.Func([], [IDL.Vec(Part)], ['query']),
     'getAvailableMechanics' : IDL.Func([], [IDL.Vec(Mechanic)], ['query']),
     'getBooking' : IDL.Func([IDL.Text], [Booking], ['query']),
@@ -377,6 +382,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'submitRating' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
+    'updateMechanicVerificationStatus' : IDL.Func([IDL.Principal, IDL.Text], [], []),
     'updateServiceRequest' : IDL.Func(
         [
           IDL.Text,

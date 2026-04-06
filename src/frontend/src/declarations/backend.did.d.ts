@@ -101,6 +101,7 @@ export interface UserProfile {
   'specialties' : [] | [string],
   'totalRatings' : bigint,
   'ratingsSum' : bigint,
+  'verificationStatus' : [] | [string],
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
@@ -121,6 +122,7 @@ export interface _SERVICE {
     string
   >,
   'customerRespondToPrice' : ActorMethod<[string, boolean], undefined>,
+  'getAllMechanics' : ActorMethod<[], Array<UserProfile>>,
   'getAllParts' : ActorMethod<[], Array<Part>>,
   'getAvailableMechanics' : ActorMethod<[], Array<Mechanic>>,
   'getBooking' : ActorMethod<[string], Booking>,
@@ -158,6 +160,7 @@ export interface _SERVICE {
     undefined
   >,
   'submitRating' : ActorMethod<[string, bigint, string], undefined>,
+  'updateMechanicVerificationStatus' : ActorMethod<[Principal, string], undefined>,
   'updateServiceRequest' : ActorMethod<
     [
       string,

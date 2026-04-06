@@ -16,17 +16,7 @@ import { toast } from "sonner";
 import type { UserProfile } from "../backend";
 import { useActor } from "../hooks/useActor";
 
-type MechanicProfile = UserProfile & { verificationStatus?: string };
-
-// These two methods exist on the Backend class but are missing from the backendInterface type.
-// We extend with just the missing signatures so we can call them without (actor as any).
-interface WithAdminMethods {
-  getAllMechanics(): Promise<Array<UserProfile>>;
-  updateMechanicVerificationStatus(
-    mechanicId: Principal,
-    status: string,
-  ): Promise<void>;
-}
+type MechanicProfile = UserProfile;
 
 function getInitials(name: string) {
   return name
@@ -167,10 +157,7 @@ function MechanicCard({
 }
 
 export default function AdminPanel({ onBack }: { onBack?: () => void } = {}) {
-  const { actor: rawActor } = useActor();
-  // Cast to include admin methods that exist on the Backend class but are
-  // missing from the backendInterface type declaration (backend.ts is read-only).
-  const actor = rawActor as (typeof rawActor & WithAdminMethods) | null;
+  const { actor } = useActor();
   const queryClient = useQueryClient();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 

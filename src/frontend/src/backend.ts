@@ -160,6 +160,7 @@ export interface UserProfile {
     specialties?: string;
     totalRatings: bigint;
     ratingsSum: bigint;
+    verificationStatus?: string;
 }
 export interface Review {
     id: string;
@@ -237,6 +238,8 @@ export interface backendInterface {
     getMechanicPublicProfile(mechanicId: Principal): Promise<UserProfile | null>;
     updateUserProfile(name: string | null, profileImage: string | null, yearsOfExperience: bigint | null, specialties: string | null): Promise<UserProfile>;
     submitRating(requestId: string, rating: bigint, raterRole: string): Promise<void>;
+    getAllMechanics(): Promise<Array<UserProfile>>;
+    updateMechanicVerificationStatus(mechanicId: Principal, status: string): Promise<void>;
 }
 import type { Booking as _Booking, ServiceRequest as _ServiceRequest, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -843,11 +846,11 @@ export class Backend implements backendInterface {
         }
     }
     async getAllMechanics(): Promise<Array<UserProfile>> {
-        const result = await (this.actor as any).getAllMechanics();
-        return result.map((p: any) => from_candid_UserProfile_record(this._uploadFile, this._downloadFile, p));
+        const result = await this.actor.getAllMechanics();
+        return result.map((p) => from_candid_UserProfile_record(this._uploadFile, this._downloadFile, p));
     }
     async updateMechanicVerificationStatus(mechanicId: import("@icp-sdk/core/principal").Principal, status: string): Promise<void> {
-        await (this.actor as any).updateMechanicVerificationStatus(mechanicId, status);
+        await this.actor.updateMechanicVerificationStatus(mechanicId, status);
     }
 }
 function from_candid_Booking_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Booking): Booking {
@@ -883,7 +886,7 @@ function from_candid_UserProfile_record(_uploadFile: (file: ExternalBlob) => Pro
         specialties: (v as any).specialties != null && (v as any).specialties.length > 0 ? (v as any).specialties[0] : undefined,
         totalRatings: (v as any).totalRatings ?? BigInt(0),
         ratingsSum: (v as any).ratingsSum ?? BigInt(0),
-        verificationStatus: (v as any).verificationStatus != null && (v as any).verificationStatus.length > 0 ? (v as any).verificationStatus[0] : undefined,
+        verificationStatus: v.verificationStatus != null && v.verificationStatus.length > 0 ? v.verificationStatus[0] : undefined,
     };
 }
 function from_candid_opt_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
