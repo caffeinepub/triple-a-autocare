@@ -11,8 +11,8 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
-import { Variant_cancelled_pending_completed_confirmed } from "../backend";
+import type { UserProfile } from "../backend-types";
+import { Variant_cancelled_pending_completed_confirmed } from "../backend-types";
 import MechanicRequestModal from "../components/MechanicRequestModal";
 import {
   useCustomerActiveRequest,

@@ -7,11 +7,9 @@ import type {
   Review,
   ServiceRequest,
   UserProfile,
-} from "../backend";
-import {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
-} from "../backend";
+} from "../backend-types";
 import { getEmailIdentity } from "../utils/emailIdentityStore";
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
@@ -621,7 +619,7 @@ export function useCancelServiceRequest() {
 export {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
-};
+} from "../backend-types";
 
 export function useGetMessages(requestId: string | null) {
   const { actor, isFetching } = useActor();

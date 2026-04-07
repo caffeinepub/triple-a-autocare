@@ -11,7 +11,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
+import type { UserProfile } from "../backend-types";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
 import {
   useAcceptServiceRequest,

@@ -13,7 +13,7 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
+import type { UserProfile } from "../backend-types";
 import { useActor } from "../hooks/useActor";
 
 type MechanicProfile = UserProfile;

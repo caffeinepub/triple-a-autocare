@@ -59,12 +59,13 @@ async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
   throw lastError || new Error("Unknown error occurred during retry attempts");
 }
 
-function isRetriableError(error: any): boolean {
-  const errorMessage = error?.message?.toLowerCase() || "";
+function isRetriableError(error: unknown): boolean {
+  const err = error as { message?: string; response?: { status?: number } };
+  const errorMessage = err?.message?.toLowerCase() || "";
 
   // Don't retry client errors (4xx except specific ones)
-  if (error?.response?.status) {
-    const status = error.response.status;
+  if (err?.response?.status) {
+    const status = err.response.status;
     // Only retry these 4xx errors
     if (status === 408 || status === 429) return true;
     // Don't retry other 4xx client errors
@@ -141,11 +142,11 @@ class YHash {
     left: YHash | null,
     right: YHash | null,
   ): Promise<YHash> {
-    let leftBytes =
+    const leftBytes =
       left instanceof YHash
         ? left.bytes
         : new TextEncoder().encode("UNBALANCED");
-    let rightBytes =
+    const rightBytes =
       right instanceof YHash
         ? right.bytes
         : new TextEncoder().encode("UNBALANCED");
@@ -404,7 +405,9 @@ class StorageGatewayClient {
           `Failed to upload chunk ${params.chunkIndex}: ${response.status} ${response.statusText} - ${errorText}`,
         );
         // Add response status for retry logic
-        (error as any).response = { status: response.status };
+        (error as unknown as { response: { status: number } }).response = {
+          status: response.status,
+        };
         throw error;
       }
 
@@ -461,7 +464,9 @@ class StorageGatewayClient {
           `Failed to upload blob tree: ${response.status} ${response.statusText} - ${errorText}`,
         );
         // Add response status for retry logic
-        (error as any).response = { status: response.status };
+        (error as unknown as { response: { status: number } }).response = {
+          status: response.status,
+        };
         throw error;
       }
     });

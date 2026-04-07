@@ -1,0 +1,350 @@
+// Version: 1.0.0
+type Booking__519012722 =
+  {
+    createdAt : Time__900049286;
+    id : Text;
+    mechanicId : Text;
+    notes : ?Text;
+    scheduledDate : Text;
+    scheduledTime : Text;
+    serviceType : Text;
+    status : {#cancelled; #completed; #confirmed; #pending};
+    userId : Principal
+  };
+type ChatMessageV1__874988633 =
+  {
+    createdAt : Time__900049286;
+    id : Text;
+    message : Text;
+    requestId : Text;
+    senderId : Principal;
+    senderRole : Text
+  };
+type ChatMessage__1037536196 =
+  {
+    createdAt : Time__900049286;
+    id : Text;
+    isRead : Bool;
+    message : Text;
+    requestId : Text;
+    senderId : Principal;
+    senderRole : Text
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Int__270357528 = Int__616954475;
+type Int__616954475 = Int;
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Mechanic__360877703 =
+  {
+    distanceKm : Float;
+    id : Text;
+    isAvailable : Bool;
+    name : Text;
+    rating : Float;
+    specialty : Text
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type Part__324449025 =
+  {
+    category : Text;
+    description : Text;
+    id : Text;
+    inStock : Bool;
+    isVerifiedSeller : Bool;
+    name : Text;
+    priceNGN : Nat;
+    sellerName : Text
+  };
+type Review__422344017 =
+  {
+    id : Text;
+    mechanicId : Text;
+    rating : Nat;
+    text : Text;
+    timestamp : Time__900049286;
+    userId : Principal
+  };
+type ServiceRequestV1__865077481 =
+  {
+    createdAt : Time__900049286;
+    customerId : Principal;
+    customerName : Text;
+    id : Text;
+    issueDescription : Text;
+    location : Text;
+    mechanicId : ?Principal;
+    mechanicName : ?Text;
+    serviceType : Text;
+    status : {#accepted; #arrived; #completed; #on_the_way; #searching}
+  };
+type ServiceRequestV2__290177331 =
+  {
+    createdAt : Time__900049286;
+    customerId : Principal;
+    customerName : Text;
+    id : Text;
+    issueDescription : Text;
+    location : Text;
+    mechanicId : ?Principal;
+    mechanicName : ?Text;
+    price : ?Nat;
+    serviceType : Text;
+    status :
+      {
+        #accepted;
+        #approved;
+        #arrived;
+        #cancelled;
+        #completed;
+        #on_the_way;
+        #price_sent;
+        #searching
+      }
+  };
+type ServiceRequestV3__67568408 =
+  {
+    cancelReason : ?Text;
+    cancelledBy : ?Text;
+    createdAt : Time__900049286;
+    customerId : Principal;
+    customerName : Text;
+    id : Text;
+    issueDescription : Text;
+    location : Text;
+    mechanicId : ?Principal;
+    mechanicName : ?Text;
+    price : ?Nat;
+    serviceType : Text;
+    status :
+      {
+        #accepted;
+        #approved;
+        #arrived;
+        #cancelled;
+        #completed;
+        #on_the_way;
+        #price_sent;
+        #searching
+      }
+  };
+type ServiceRequestV4__675833487 =
+  {
+    address : ?Text;
+    cancelReason : ?Text;
+    cancelledBy : ?Text;
+    createdAt : Time__900049286;
+    customerId : Principal;
+    customerName : Text;
+    id : Text;
+    issueDescription : Text;
+    latitude : ?Float;
+    location : Text;
+    longitude : ?Float;
+    mechanicId : ?Principal;
+    mechanicName : ?Text;
+    price : ?Nat;
+    serviceType : Text;
+    status :
+      {
+        #accepted;
+        #approved;
+        #arrived;
+        #cancelled;
+        #completed;
+        #on_the_way;
+        #price_sent;
+        #searching
+      }
+  };
+type ServiceRequest__160030652 =
+  {
+    address : ?Text;
+    cancelReason : ?Text;
+    cancelledBy : ?Text;
+    createdAt : Time__900049286;
+    customerId : Principal;
+    customerName : Text;
+    customerRating : ?Nat;
+    id : Text;
+    issueDescription : Text;
+    latitude : ?Float;
+    location : Text;
+    longitude : ?Float;
+    mechanicId : ?Principal;
+    mechanicName : ?Text;
+    mechanicRating : ?Nat;
+    price : ?Nat;
+    serviceType : Text;
+    status :
+      {
+        #accepted;
+        #approved;
+        #arrived;
+        #cancelled;
+        #completed;
+        #on_the_way;
+        #price_sent;
+        #searching
+      }
+  };
+type Time__796480547 = Int__270357528;
+type Time__900049286 = Time__796480547;
+type UserProfileV1__193411662 =
+  {location : Text; name : Text; phone : Text; userId : Principal};
+type UserProfileV2__3614496 =
+  {
+    address : ?Text;
+    latitude : ?Float;
+    location : Text;
+    longitude : ?Float;
+    name : Text;
+    phone : Text;
+    userId : Principal
+  };
+type UserProfileV3__157093711 =
+  {
+    address : ?Text;
+    latitude : ?Float;
+    location : Text;
+    longitude : ?Float;
+    name : Text;
+    phone : Text;
+    profileImage : ?Text;
+    role : ?Text;
+    specialties : ?Text;
+    userId : Principal;
+    yearsOfExperience : ?Nat
+  };
+type UserProfileV4__799981775 =
+  {
+    address : ?Text;
+    latitude : ?Float;
+    location : Text;
+    longitude : ?Float;
+    name : Text;
+    phone : Text;
+    profileImage : ?Text;
+    ratingsSum : Nat;
+    role : ?Text;
+    specialties : ?Text;
+    totalRatings : Nat;
+    userId : Principal;
+    yearsOfExperience : ?Nat
+  };
+type UserProfile__491224006 =
+  {
+    address : ?Text;
+    latitude : ?Float;
+    location : Text;
+    longitude : ?Float;
+    name : Text;
+    phone : Text;
+    profileImage : ?Text;
+    ratingsSum : Nat;
+    role : ?Text;
+    specialties : ?Text;
+    totalRatings : Nat;
+    userId : Principal;
+    verificationStatus : ?Text;
+    yearsOfExperience : ?Nat
+  };
+type UserRole__521596351 = {#admin; #guest; #user};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__521596351>
+    };
+  stable bookings :
+    {
+      var root : Node__46230540<Text, Booking__519012722>;
+      var size : Nat__490723111
+    };
+  stable chatMessages :
+    {
+      var root : Node__46230540<Text, ChatMessageV1__874988633>;
+      var size : Nat__490723111
+    };
+  stable chatMessagesV2 :
+    {
+      var root : Node__46230540<Text, ChatMessage__1037536196>;
+      var size : Nat__490723111
+    };
+  stable mechanics :
+    {
+      var root : Node__46230540<Text, Mechanic__360877703>;
+      var size : Nat__490723111
+    };
+  stable parts :
+    {
+      var root : Node__46230540<Text, Part__324449025>;
+      var size : Nat__490723111
+    };
+  stable reviews :
+    {
+      var root : Node__46230540<Text, Review__422344017>;
+      var size : Nat__490723111
+    };
+  stable serviceRequests :
+    {
+      var root : Node__46230540<Text, ServiceRequestV1__865077481>;
+      var size : Nat__490723111
+    };
+  stable serviceRequestsV2 :
+    {
+      var root : Node__46230540<Text, ServiceRequestV2__290177331>;
+      var size : Nat__490723111
+    };
+  stable serviceRequestsV3 :
+    {
+      var root : Node__46230540<Text, ServiceRequestV3__67568408>;
+      var size : Nat__490723111
+    };
+  stable serviceRequestsV4 :
+    {
+      var root : Node__46230540<Text, ServiceRequestV4__675833487>;
+      var size : Nat__490723111
+    };
+  stable serviceRequestsV5 :
+    {
+      var root : Node__46230540<Text, ServiceRequest__160030652>;
+      var size : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfileV1__193411662>;
+      var size : Nat__490723111
+    };
+  stable userProfilesV2 :
+    {
+      var root : Node__46230540<Principal, UserProfileV2__3614496>;
+      var size : Nat__490723111
+    };
+  stable userProfilesV3 :
+    {
+      var root : Node__46230540<Principal, UserProfileV3__157093711>;
+      var size : Nat__490723111
+    };
+  stable userProfilesV4 :
+    {
+      var root : Node__46230540<Principal, UserProfileV4__799981775>;
+      var size : Nat__490723111
+    };
+  stable userProfilesV5 :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    };
+  stable userRoles :
+    {var root : Node__46230540<Principal, Text>; var size : Nat__490723111}
+};

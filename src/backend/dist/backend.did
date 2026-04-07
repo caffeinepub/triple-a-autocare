@@ -1,0 +1,175 @@
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = 
+ record {
+   address: opt text;
+   latitude: opt float64;
+   location: text;
+   longitude: opt float64;
+   name: text;
+   phone: text;
+   profileImage: opt text;
+   ratingsSum: nat;
+   role: opt text;
+   specialties: opt text;
+   totalRatings: nat;
+   userId: principal;
+   verificationStatus: opt text;
+   yearsOfExperience: opt nat;
+ };
+type Time = int;
+type ServiceRequest = 
+ record {
+   address: opt text;
+   cancelReason: opt text;
+   cancelledBy: opt text;
+   createdAt: Time;
+   customerId: principal;
+   customerName: text;
+   customerRating: opt nat;
+   id: text;
+   issueDescription: text;
+   latitude: opt float64;
+   location: text;
+   longitude: opt float64;
+   mechanicId: opt principal;
+   mechanicName: opt text;
+   mechanicRating: opt nat;
+   price: opt nat;
+   serviceType: text;
+   status:
+    variant {
+      accepted;
+      approved;
+      arrived;
+      cancelled;
+      completed;
+      on_the_way;
+      price_sent;
+      searching;
+    };
+ };
+type Review = 
+ record {
+   id: text;
+   mechanicId: text;
+   rating: nat;
+   "text": text;
+   timestamp: Time;
+   userId: principal;
+ };
+type Part = 
+ record {
+   category: text;
+   description: text;
+   id: text;
+   inStock: bool;
+   isVerifiedSeller: bool;
+   name: text;
+   priceNGN: nat;
+   sellerName: text;
+ };
+type Mechanic = 
+ record {
+   distanceKm: float64;
+   id: text;
+   isAvailable: bool;
+   name: text;
+   rating: float64;
+   specialty: text;
+ };
+type ChatMessage = 
+ record {
+   createdAt: Time;
+   id: text;
+   isRead: bool;
+   message: text;
+   requestId: text;
+   senderId: principal;
+   senderRole: text;
+ };
+type Booking = 
+ record {
+   createdAt: Time;
+   id: text;
+   mechanicId: text;
+   notes: opt text;
+   scheduledDate: text;
+   scheduledTime: text;
+   serviceType: text;
+   status: variant {
+             cancelled;
+             completed;
+             confirmed;
+             pending;
+           };
+   userId: principal;
+ };
+service : {
+  _initializeAccessControlWithSecret: (userSecret: text) -> ();
+  acceptServiceRequest: (requestId: text, mechanicName: text) -> ();
+  addReview: (mechanicId: text, rating: nat, "text": text) -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  cancelServiceRequest: (requestId: text, cancelledBy: text, reason:
+   opt text) -> ();
+  completeJob: (requestId: text) -> ();
+  createBooking: (mechanicId: text, serviceType: text, scheduledDate: 
+   text, scheduledTime: text, notes: opt text) -> (text);
+  createServiceRequest: (customerName: text, location: text,
+   issueDescription: text, serviceType: text, latitude: opt float64,
+   longitude: opt float64, address: opt text) -> (text);
+  customerRespondToPrice: (requestId: text, accept: bool) -> ();
+  getAllMechanics: () -> (vec UserProfile) query;
+  getAllParts: () -> (vec Part) query;
+  getAvailableMechanics: () -> (vec Mechanic) query;
+  getBooking: (bookingId: text) -> (Booking) query;
+  getCallerUserAppRole: () -> (text) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getCustomerActiveRequest: () -> (opt ServiceRequest) query;
+  getCustomerCompletedRequests: () -> (vec ServiceRequest) query;
+  getMechanic: (id: text) -> (Mechanic) query;
+  getMechanicActiveJob: () -> (opt ServiceRequest) query;
+  getMechanicCompletedJobs: () -> (vec ServiceRequest) query;
+  getMechanicPublicProfile: (mechanicId: principal) ->
+   (opt UserProfile) query;
+  getMessages: (requestId: text) -> (vec ChatMessage) query;
+  getPart: (id: text) -> (Part) query;
+  getReviews: (mechanicId: text) -> (vec Review) query;
+  getSearchingRequests: () -> (vec ServiceRequest) query;
+  getServiceRequests: () -> (vec ServiceRequest) query;
+  getUserBookings: () -> (vec Booking) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  isCallerAdmin: () -> (bool) query;
+  markMessagesRead: (requestId: text) -> ();
+  saveCallerUserAppRole: (role: text) -> ();
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  seedData: () -> ();
+  sendMessage: (requestId: text, message: text) -> ();
+  submitRating: (requestId: text, rating: nat, raterRole: text) -> ();
+  submitServicePrice: (requestId: text, price: nat) -> ();
+  updateBookingStatus: (bookingId: text, newStatus:
+   variant {
+     cancelled;
+     completed;
+     confirmed;
+     pending;
+   }) -> ();
+  updateMechanicVerificationStatus: (mechanicId: principal, status: text) ->
+   ();
+  updateServiceRequest: (requestId: text, price: nat, newStatus:
+   variant {price_sent;}) -> ();
+  updateServiceRequestStatus: (requestId: text, newStatus:
+   variant {
+     accepted;
+     arrived;
+     completed;
+     on_the_way;
+   }) -> ();
+  updateUserProfile: (name: opt text, profileImage: opt text,
+   yearsOfExperience: opt nat, specialties: opt text) -> (UserProfile);
+}

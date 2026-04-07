@@ -6,7 +6,7 @@ import { Clock, LogOut, ShieldX, Wrench } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "./backend";
+import type { UserProfile } from "./backend-types";
 import AdminPanel from "./components/AdminPanel";
 import {
   AdminMechanicBottomNav,
@@ -505,6 +505,7 @@ function AppContent() {
             role: roleToSave,
             totalRatings: BigInt(0),
             ratingsSum: BigInt(0),
+            ...(roleToSave === "mechanic" && { verificationStatus: "pending" }),
           };
 
           await saveProfileMutation.mutateAsync(profileData);

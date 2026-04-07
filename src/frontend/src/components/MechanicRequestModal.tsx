@@ -8,7 +8,7 @@ import { Building2, Car, Loader2, MapPin, Search } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
+import type { UserProfile } from "../backend-types";
 import { useCreateServiceRequest } from "../hooks/useQueries";
 
 type Step = "service-type" | "confirm" | "success";

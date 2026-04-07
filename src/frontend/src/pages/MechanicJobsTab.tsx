@@ -10,8 +10,8 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Variant_on_the_way_arrived_completed_accepted } from "../backend";
-import type { UserProfile } from "../backend";
+import { Variant_on_the_way_arrived_completed_accepted } from "../backend-types";
+import type { UserProfile } from "../backend-types";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
 import {
