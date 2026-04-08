@@ -28,8 +28,8 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Variant_cancelled_pending_completed_confirmed } from "../backend-types";
-import type { Booking, UserProfile } from "../backend-types";
+import { Variant_cancelled_pending_completed_confirmed } from "../backend";
+import type { Booking, UserProfile } from "../backend";
 import MechanicRequestModal from "../components/MechanicRequestModal";
 import ReviewModal from "../components/ReviewModal";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";

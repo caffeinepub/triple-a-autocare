@@ -7,10 +7,12 @@ import type {
   Review,
   ServiceRequest,
   UserProfile,
+} from "../backend";
+import {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
-} from "../backend-types";
-import { Variant_price_sent } from "../backend-types";
+} from "../backend";
+import { getEmailIdentity } from "../utils/emailIdentityStore";
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
@@ -81,8 +83,15 @@ function getAppRoleKey(principal: string) {
 
 export function useUserAppRole() {
   const { identity } = useInternetIdentity();
-  const principal = identity?.getPrincipal().toString() ?? "";
-  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
+  const emailPrincipal = getEmailIdentity()?.getPrincipal();
+  const iiPrincipal = identity?.getPrincipal();
+  const effectivePrincipal =
+    emailPrincipal && !emailPrincipal.isAnonymous()
+      ? emailPrincipal
+      : iiPrincipal;
+  const principal = effectivePrincipal?.toString() ?? "";
+  const isAuthenticated =
+    !!effectivePrincipal && !effectivePrincipal.isAnonymous();
 
   return useQuery<string>({
     queryKey: ["userAppRole", principal],
@@ -97,7 +106,13 @@ export function useSaveUserAppRole() {
   const { identity } = useInternetIdentity();
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  const principal = identity?.getPrincipal().toString() ?? "";
+  const emailPrincipal = getEmailIdentity()?.getPrincipal();
+  const iiPrincipal = identity?.getPrincipal();
+  const effectivePrincipal =
+    emailPrincipal && !emailPrincipal.isAnonymous()
+      ? emailPrincipal
+      : iiPrincipal;
+  const principal = effectivePrincipal?.toString() ?? "";
 
   return useMutation({
     mutationFn: async (role: string) => {
@@ -567,7 +582,7 @@ export function useUpdateServiceRequest() {
       return actor.updateServiceRequest(
         params.requestId,
         params.price,
-        Variant_price_sent.price_sent,
+        params.status,
       );
     },
     onSuccess: () => {
@@ -606,9 +621,7 @@ export function useCancelServiceRequest() {
 export {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
-  Variant_price_sent,
-  Variant_on_the_way_cancelled_arrived_completed_approved_accepted_searching_price_sent,
-} from "../backend-types";
+};
 
 export function useGetMessages(requestId: string | null) {
   const { actor, isFetching } = useActor();

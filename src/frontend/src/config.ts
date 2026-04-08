@@ -1,9 +1,9 @@
 import {
   createActor,
+  type backendInterface,
   type CreateActorOptions,
   ExternalBlob,
 } from "./backend";
-import type { backendInterface } from "./backend-types";
 import { StorageClient } from "./utils/StorageClient";
 import { HttpAgent } from "@icp-sdk/core/agent";
 
@@ -175,5 +175,5 @@ export async function createActorWithConfig(
     uploadFile,
     downloadFile,
     actorOptions,
-  ) as unknown as backendInterface;
+  );
 }

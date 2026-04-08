@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import type { backendInterface } from "../backend-types";
+import type { backendInterface } from "../backend";
 import { createActorWithConfig } from "../config";
 import { getSecretParameter } from "../utils/urlParams";
 import { useInternetIdentity } from "./useInternetIdentity";
@@ -9,18 +9,14 @@ const ACTOR_QUERY_KEY = "actor";
 export function useActor() {
   const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
-
-  // Only build an actor when we have a real, non-anonymous identity.
-  // Internet Identity is the only supported auth method — never fall back
-  // to an anonymous actor, as all backend calls require an authenticated caller.
-  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
-
-  const actorQuery = useQuery<backendInterface | null>({
+  const actorQuery = useQuery<backendInterface>({
     queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
     queryFn: async () => {
-      if (!isAuthenticated || !identity) {
-        // Return null — never create an anonymous actor
-        return null;
+      const isAuthenticated = !!identity;
+
+      if (!isAuthenticated) {
+        // Return anonymous actor if not authenticated
+        return await createActorWithConfig();
       }
 
       const actorOptions = {
@@ -36,6 +32,7 @@ export function useActor() {
     },
     // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
+    // This will cause the actor to be recreated when the identity changes
     enabled: true,
   });
 

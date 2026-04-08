@@ -497,7 +497,6 @@ function AppContent() {
             role: roleToSave,
             totalRatings: BigInt(0),
             ratingsSum: BigInt(0),
-            ...(roleToSave === "mechanic" && { verificationStatus: "pending" }),
           };
 
           await saveProfileMutation.mutateAsync(profileData);

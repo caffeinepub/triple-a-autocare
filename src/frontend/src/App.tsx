@@ -6,7 +6,7 @@ import { Clock, LogOut, ShieldX, Wrench } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "./backend-types";
+import type { UserProfile } from "./backend";
 import AdminPanel from "./components/AdminPanel";
 import {
   AdminMechanicBottomNav,
@@ -481,42 +481,18 @@ function AppContent() {
         onComplete={async (data) => {
           console.log("Saving user profile:", data);
 
+          if (!actor || !identity) {
+            throw new Error(
+              "Not connected. Please sign in with Internet Identity and try again.",
+            );
+          }
+
           const pendingRole = sessionStorage.getItem("pending-role") as
             | "customer"
             | "mechanic"
             | null;
           const roleToSave: "customer" | "mechanic" =
             pendingRole ?? selectedRole;
-
-          // Save to localStorage FIRST — this prevents the onboarding loop
-          // even if the backend call fails.
-          localStorage.setItem(
-            USER_PROFILE_KEY,
-            JSON.stringify({
-              name: data.name,
-              phone: data.phone,
-              address: data.address ?? data.location,
-              latitude: data.latitude,
-              longitude: data.longitude,
-            }),
-          );
-          if (identity) {
-            const roleKey = `aaa-app-role-${identity.getPrincipal().toString()}`;
-            localStorage.setItem(roleKey, roleToSave);
-          }
-
-          if (!actor || !identity) {
-            console.warn(
-              "⚠️ Actor not ready, using local fallback. Data will sync when connection is restored.",
-            );
-            if (roleToSave === "mechanic") {
-              toast.info(
-                "Your account is pending review. You will be notified when approved.",
-                { duration: 5000 },
-              );
-            }
-            return; // localStorage already saved — navigation will proceed
-          }
 
           const profileData: UserProfile = {
             userId: identity.getPrincipal() as unknown as Principal,
@@ -529,27 +505,32 @@ function AppContent() {
             role: roleToSave,
             totalRatings: BigInt(0),
             ratingsSum: BigInt(0),
-            ...(roleToSave === "mechanic" && { verificationStatus: "pending" }),
           };
 
-          try {
-            await saveProfileMutation.mutateAsync(profileData);
-            await saveRoleMutation.mutateAsync(roleToSave);
+          await saveProfileMutation.mutateAsync(profileData);
+          await saveRoleMutation.mutateAsync(roleToSave);
 
-            queryClient.setQueryData(["userAppRole", principal], roleToSave);
-            queryClient.setQueryData(["profile"], profileData);
+          queryClient.setQueryData(["userAppRole", principal], roleToSave);
+          queryClient.setQueryData(["profile"], profileData);
 
-            if (pendingRole) {
-              sessionStorage.removeItem("pending-role");
-            }
+          localStorage.setItem(
+            USER_PROFILE_KEY,
+            JSON.stringify({
+              name: data.name,
+              phone: data.phone,
+              address: data.address,
+              latitude: data.latitude,
+              longitude: data.longitude,
+            }),
+          );
+          const roleKey = `aaa-app-role-${identity.getPrincipal().toString()}`;
+          localStorage.setItem(roleKey, roleToSave);
 
-            console.log("✅ Profile saved to backend successfully");
-          } catch (err) {
-            console.warn(
-              "⚠️ Backend save failed, proceeding with local data:",
-              err,
-            );
+          if (pendingRole) {
+            sessionStorage.removeItem("pending-role");
           }
+
+          console.log("\u2705 Profile saved to backend successfully");
 
           if (roleToSave === "mechanic") {
             toast.info(

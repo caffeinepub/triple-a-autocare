@@ -27,11 +27,11 @@ export interface Booking {
 export interface ChatMessage {
   'id' : string,
   'requestId' : string,
-  'createdAt' : Time,
-  'isRead' : boolean,
-  'message' : string,
-  'senderRole' : string,
   'senderId' : Principal,
+  'senderRole' : string,
+  'message' : string,
+  'isRead' : boolean,
+  'createdAt' : Time,
 }
 export interface Mechanic {
   'id' : string,
@@ -63,44 +63,44 @@ export interface ServiceRequest {
   'id' : string,
   'customerName' : string,
   'status' : { 'on_the_way' : null } |
-    { 'cancelled' : null } |
     { 'arrived' : null } |
     { 'completed' : null } |
-    { 'approved' : null } |
     { 'accepted' : null } |
     { 'searching' : null } |
-    { 'price_sent' : null },
-  'latitude' : [] | [number],
+    { 'price_sent' : null } |
+    { 'approved' : null } |
+    { 'cancelled' : null },
   'serviceType' : string,
   'issueDescription' : string,
-  'mechanicRating' : [] | [bigint],
   'createdAt' : Time,
-  'customerRating' : [] | [bigint],
-  'cancelledBy' : [] | [string],
   'mechanicId' : [] | [Principal],
+  'mechanicName' : [] | [string],
+  'price' : [] | [bigint],
+  'cancelledBy' : [] | [string],
+  'cancelReason' : [] | [string],
+  'customerId' : Principal,
+  'location' : string,
+  'latitude' : [] | [number],
   'longitude' : [] | [number],
   'address' : [] | [string],
-  'mechanicName' : [] | [string],
-  'customerId' : Principal,
-  'cancelReason' : [] | [string],
-  'price' : [] | [bigint],
-  'location' : string,
+  'customerRating' : [] | [bigint],
+  'mechanicRating' : [] | [bigint],
 }
 export type Time = bigint;
 export interface UserProfile {
-  'totalRatings' : bigint,
-  'latitude' : [] | [number],
-  'yearsOfExperience' : [] | [bigint],
-  'ratingsSum' : bigint,
   'userId' : Principal,
-  'profileImage' : [] | [string],
   'name' : string,
-  'role' : [] | [string],
-  'longitude' : [] | [number],
-  'address' : [] | [string],
-  'specialties' : [] | [string],
   'phone' : string,
   'location' : string,
+  'latitude' : [] | [number],
+  'longitude' : [] | [number],
+  'address' : [] | [string],
+  'profileImage' : [] | [string],
+  'role' : [] | [string],
+  'yearsOfExperience' : [] | [bigint],
+  'specialties' : [] | [string],
+  'totalRatings' : bigint,
+  'ratingsSum' : bigint,
   'verificationStatus' : [] | [string],
 }
 export type UserRole = { 'admin' : null } |
@@ -111,25 +111,14 @@ export interface _SERVICE {
   'acceptServiceRequest' : ActorMethod<[string, string], undefined>,
   'addReview' : ActorMethod<[string, bigint, string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'cancelServiceRequest' : ActorMethod<
-    [string, string, [] | [string]],
-    undefined
-  >,
+  'cancelServiceRequest' : ActorMethod<[string, string, [] | [string]], undefined>,
   'completeJob' : ActorMethod<[string], undefined>,
   'createBooking' : ActorMethod<
     [string, string, string, string, [] | [string]],
     string
   >,
   'createServiceRequest' : ActorMethod<
-    [
-      string,
-      string,
-      string,
-      string,
-      [] | [number],
-      [] | [number],
-      [] | [string],
-    ],
+    [string, string, string, string, [] | [number], [] | [number], [] | [string]],
     string
   >,
   'customerRespondToPrice' : ActorMethod<[string, boolean], undefined>,
@@ -154,12 +143,11 @@ export interface _SERVICE {
   'getUserBookings' : ActorMethod<[], Array<Booking>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'markMessagesRead' : ActorMethod<[string], undefined>,
   'saveCallerUserAppRole' : ActorMethod<[string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'seedData' : ActorMethod<[], undefined>,
+  'markMessagesRead' : ActorMethod<[string], undefined>,
   'sendMessage' : ActorMethod<[string, string], undefined>,
-  'submitRating' : ActorMethod<[string, bigint, string], undefined>,
   'submitServicePrice' : ActorMethod<[string, bigint], undefined>,
   'updateBookingStatus' : ActorMethod<
     [
@@ -171,12 +159,14 @@ export interface _SERVICE {
     ],
     undefined
   >,
-  'updateMechanicVerificationStatus' : ActorMethod<
-    [Principal, string],
-    undefined
-  >,
+  'submitRating' : ActorMethod<[string, bigint, string], undefined>,
+  'updateMechanicVerificationStatus' : ActorMethod<[Principal, string], undefined>,
   'updateServiceRequest' : ActorMethod<
-    [string, bigint, { 'price_sent' : null }],
+    [
+      string,
+      bigint,
+      { 'price_sent' : null },
+    ],
     undefined
   >,
   'updateServiceRequestStatus' : ActorMethod<

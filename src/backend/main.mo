@@ -592,7 +592,7 @@ actor {
     };
   };
 
-  public query func getMechanic(id : Text) : async Mechanic {
+  public query ({ caller }) func getMechanic(id : Text) : async Mechanic {
     getMechanicInternal(id);
   };
 
@@ -617,7 +617,7 @@ actor {
     reviews.add(review.id, review);
   };
 
-  public query func getReviews(mechanicId : Text) : async [Review] {
+  public query ({ caller }) func getReviews(mechanicId : Text) : async [Review] {
     let mechanicReviews = reviews.values().filter(
       func(r) { Text.equal(r.mechanicId, mechanicId) }
     );
@@ -629,7 +629,7 @@ actor {
     );
   };
 
-  public query func getAvailableMechanics() : async [Mechanic] {
+  public query ({ caller }) func getAvailableMechanics() : async [Mechanic] {
     let availableMechanics = mechanics.values().filter(
       func(m) { m.isAvailable }
     );
@@ -648,11 +648,11 @@ actor {
     };
   };
 
-  public query func getPart(id : Text) : async Part {
+  public query ({ caller }) func getPart(id : Text) : async Part {
     getPartInternal(id);
   };
 
-  public query func getAllParts() : async [Part] {
+  public query ({ caller }) func getAllParts() : async [Part] {
     parts.values().toArray();
   };
 

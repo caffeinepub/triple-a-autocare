@@ -160,7 +160,6 @@ export interface UserProfile {
     specialties?: string;
     totalRatings: bigint;
     ratingsSum: bigint;
-    verificationStatus?: string;
 }
 export interface Review {
     id: string;
@@ -649,7 +648,6 @@ export class Backend implements backendInterface {
             specialties: arg0.specialties != null ? [arg0.specialties] : [],
             totalRatings: arg0.totalRatings ?? BigInt(0),
             ratingsSum: arg0.ratingsSum ?? BigInt(0),
-            verificationStatus: arg0.verificationStatus != null ? [arg0.verificationStatus] : [],
         };
         if (this.processError) {
             try {

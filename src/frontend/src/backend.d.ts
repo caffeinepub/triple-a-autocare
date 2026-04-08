@@ -10,22 +10,22 @@ export type Option<T> = Some<T> | None;
 export interface ServiceRequest {
     id: string;
     customerName: string;
-    status: Variant_on_the_way_cancelled_arrived_completed_approved_accepted_searching_price_sent;
-    latitude?: number;
+    status: Variant_on_the_way_arrived_completed_accepted_searching;
     serviceType: string;
     issueDescription: string;
-    mechanicRating?: bigint;
     createdAt: Time;
-    customerRating?: bigint;
-    cancelledBy?: string;
     mechanicId?: Principal;
-    longitude?: number;
-    address?: string;
     mechanicName?: string;
     customerId: Principal;
-    cancelReason?: string;
-    price?: bigint;
     location: string;
+    price?: bigint;
+    cancelledBy?: string;
+    cancelReason?: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+    customerRating?: bigint;
+    mechanicRating?: bigint;
 }
 export interface Part {
     id: string;
@@ -38,15 +38,6 @@ export interface Part {
     priceNGN: bigint;
 }
 export type Time = bigint;
-export interface ChatMessage {
-    id: string;
-    requestId: string;
-    createdAt: Time;
-    isRead: boolean;
-    message: string;
-    senderRole: string;
-    senderId: Principal;
-}
 export interface Booking {
     id: string;
     status: Variant_cancelled_pending_completed_confirmed;
@@ -67,19 +58,19 @@ export interface Mechanic {
     rating: number;
 }
 export interface UserProfile {
-    totalRatings: bigint;
-    latitude?: number;
-    yearsOfExperience?: bigint;
-    ratingsSum: bigint;
     userId: Principal;
-    profileImage?: string;
     name: string;
-    role?: string;
-    longitude?: number;
-    address?: string;
-    specialties?: string;
     phone: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+    profileImage?: string;
+    role?: string;
+    yearsOfExperience?: bigint;
+    specialties?: string;
+    totalRatings: bigint;
+    ratingsSum: bigint;
     verificationStatus?: string;
 }
 export interface Review {
@@ -89,6 +80,15 @@ export interface Review {
     mechanicId: string;
     timestamp: Time;
     rating: bigint;
+}
+export interface ChatMessage {
+    id: string;
+    requestId: string;
+    senderId: Principal;
+    senderRole: string;
+    message: string;
+    isRead: boolean;
+    createdAt: Time;
 }
 export enum UserRole {
     admin = "admin",
@@ -107,18 +107,15 @@ export enum Variant_on_the_way_arrived_completed_accepted {
     completed = "completed",
     accepted = "accepted"
 }
-export enum Variant_on_the_way_cancelled_arrived_completed_approved_accepted_searching_price_sent {
+export enum Variant_on_the_way_arrived_completed_accepted_searching {
     on_the_way = "on_the_way",
-    cancelled = "cancelled",
     arrived = "arrived",
     completed = "completed",
-    approved = "approved",
     accepted = "accepted",
     searching = "searching",
-    price_sent = "price_sent"
-}
-export enum Variant_price_sent {
-    price_sent = "price_sent"
+    price_sent = "price_sent",
+    approved = "approved",
+    cancelled = "cancelled"
 }
 export interface backendInterface {
     acceptServiceRequest(requestId: string, mechanicName: string): Promise<void>;
@@ -129,7 +126,6 @@ export interface backendInterface {
     createBooking(mechanicId: string, serviceType: string, scheduledDate: string, scheduledTime: string, notes: string | null): Promise<string>;
     createServiceRequest(customerName: string, location: string, issueDescription: string, serviceType: string, latitude: number | null, longitude: number | null, address: string | null): Promise<string>;
     customerRespondToPrice(requestId: string, accept: boolean): Promise<void>;
-    getAllMechanics(): Promise<Array<UserProfile>>;
     getAllParts(): Promise<Array<Part>>;
     getAvailableMechanics(): Promise<Array<Mechanic>>;
     getBooking(bookingId: string): Promise<Booking>;
@@ -150,16 +146,17 @@ export interface backendInterface {
     getUserBookings(): Promise<Array<Booking>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    markMessagesRead(requestId: string): Promise<void>;
     saveCallerUserAppRole(role: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     seedData(): Promise<void>;
+    markMessagesRead(requestId: string): Promise<void>;
     sendMessage(requestId: string, message: string): Promise<void>;
-    submitRating(requestId: string, rating: bigint, raterRole: string): Promise<void>;
     submitServicePrice(requestId: string, price: bigint): Promise<void>;
     updateBookingStatus(bookingId: string, newStatus: Variant_cancelled_pending_completed_confirmed): Promise<void>;
-    updateMechanicVerificationStatus(mechanicId: Principal, status: string): Promise<void>;
-    updateServiceRequest(requestId: string, price: bigint, newStatus: Variant_price_sent): Promise<void>;
+    submitRating(requestId: string, rating: bigint, raterRole: string): Promise<void>;
+    updateServiceRequest(requestId: string, price: bigint, status: "price_sent"): Promise<void>;
     updateServiceRequestStatus(requestId: string, newStatus: Variant_on_the_way_arrived_completed_accepted): Promise<void>;
     updateUserProfile(name: string | null, profileImage: string | null, yearsOfExperience: bigint | null, specialties: string | null): Promise<UserProfile>;
+    getAllMechanics(): Promise<Array<UserProfile>>;
+    updateMechanicVerificationStatus(mechanicId: Principal, status: string): Promise<void>;
 }
