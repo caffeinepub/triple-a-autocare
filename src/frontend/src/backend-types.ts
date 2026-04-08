@@ -7,7 +7,7 @@ export type Time = bigint;
 export interface ServiceRequest {
   id: string;
   customerName: string;
-  status: Variant_on_the_way_arrived_completed_accepted_searching;
+  status: Variant_on_the_way_cancelled_arrived_completed_approved_accepted_searching_price_sent;
   serviceType: string;
   issueDescription: string;
   createdAt: Time;
@@ -124,6 +124,21 @@ export enum Variant_on_the_way_arrived_completed_accepted_searching {
   cancelled = "cancelled",
 }
 
+export enum Variant_on_the_way_cancelled_arrived_completed_approved_accepted_searching_price_sent {
+  on_the_way = "on_the_way",
+  cancelled = "cancelled",
+  arrived = "arrived",
+  completed = "completed",
+  approved = "approved",
+  accepted = "accepted",
+  searching = "searching",
+  price_sent = "price_sent",
+}
+
+export enum Variant_price_sent {
+  price_sent = "price_sent",
+}
+
 export interface backendInterface {
   _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
   acceptServiceRequest(requestId: string, mechanicName: string): Promise<void>;
@@ -190,7 +205,7 @@ export interface backendInterface {
   updateServiceRequest(
     requestId: string,
     price: bigint,
-    status: "price_sent",
+    status: Variant_price_sent,
   ): Promise<void>;
   updateServiceRequestStatus(
     requestId: string,

@@ -10,7 +10,7 @@ import type {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
 } from "../backend-types";
-import { getEmailIdentity } from "../utils/emailIdentityStore";
+import { Variant_price_sent } from "../backend-types";
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
@@ -81,15 +81,8 @@ function getAppRoleKey(principal: string) {
 
 export function useUserAppRole() {
   const { identity } = useInternetIdentity();
-  const emailPrincipal = getEmailIdentity()?.getPrincipal();
-  const iiPrincipal = identity?.getPrincipal();
-  const effectivePrincipal =
-    emailPrincipal && !emailPrincipal.isAnonymous()
-      ? emailPrincipal
-      : iiPrincipal;
-  const principal = effectivePrincipal?.toString() ?? "";
-  const isAuthenticated =
-    !!effectivePrincipal && !effectivePrincipal.isAnonymous();
+  const principal = identity?.getPrincipal().toString() ?? "";
+  const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
 
   return useQuery<string>({
     queryKey: ["userAppRole", principal],
@@ -104,13 +97,7 @@ export function useSaveUserAppRole() {
   const { identity } = useInternetIdentity();
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  const emailPrincipal = getEmailIdentity()?.getPrincipal();
-  const iiPrincipal = identity?.getPrincipal();
-  const effectivePrincipal =
-    emailPrincipal && !emailPrincipal.isAnonymous()
-      ? emailPrincipal
-      : iiPrincipal;
-  const principal = effectivePrincipal?.toString() ?? "";
+  const principal = identity?.getPrincipal().toString() ?? "";
 
   return useMutation({
     mutationFn: async (role: string) => {
@@ -580,7 +567,7 @@ export function useUpdateServiceRequest() {
       return actor.updateServiceRequest(
         params.requestId,
         params.price,
-        params.status,
+        Variant_price_sent.price_sent,
       );
     },
     onSuccess: () => {
@@ -619,6 +606,8 @@ export function useCancelServiceRequest() {
 export {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
+  Variant_price_sent,
+  Variant_on_the_way_cancelled_arrived_completed_approved_accepted_searching_price_sent,
 } from "../backend-types";
 
 export function useGetMessages(requestId: string | null) {
