@@ -7,23 +7,18 @@ import type {
   Review,
   ServiceRequest,
   UserProfile,
-} from "../backend";
-import {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
-} from "../backend";
+} from "../types";
 import { getEmailIdentity } from "../utils/emailIdentityStore";
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
 /**
- * ExtendedServiceRequest is now just ServiceRequest — the backend wrapper
- * handles all status variants and the price field directly.
+ * ExtendedServiceRequest is ServiceRequest — the backend returns all fields.
+ * customerRating and mechanicRating use null (not undefined) from the backend.
  */
-export type ExtendedServiceRequest = ServiceRequest & {
-  customerRating?: bigint;
-  mechanicRating?: bigint;
-};
+export type ExtendedServiceRequest = ServiceRequest;
 
 // ---------------------------------------------------------------------------
 // Generic backend hooks
@@ -579,11 +574,9 @@ export function useUpdateServiceRequest() {
     }) => {
       if (!actor) throw new Error("Not connected");
       if (!params.requestId) throw new Error("Missing request ID");
-      return actor.updateServiceRequest(
-        params.requestId,
-        params.price,
-        params.status,
-      );
+      return actor.updateServiceRequest(params.requestId, params.price, {
+        price_sent: null,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mechanicServiceRequests"] });
@@ -618,7 +611,7 @@ export function useCancelServiceRequest() {
   });
 }
 
-export {
+export type {
   Variant_cancelled_pending_completed_confirmed,
   Variant_on_the_way_arrived_completed_accepted,
 };

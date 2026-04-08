@@ -28,8 +28,6 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Variant_cancelled_pending_completed_confirmed } from "../backend";
-import type { Booking, UserProfile } from "../backend";
 import MechanicRequestModal from "../components/MechanicRequestModal";
 import ReviewModal from "../components/ReviewModal";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -46,6 +44,7 @@ import {
   useUserBookings,
 } from "../hooks/useQueries";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
+import type { Booking, UserProfile } from "../types";
 import { getEmailIdentity } from "../utils/emailIdentityStore";
 import {
   playMechanicFound,
@@ -619,8 +618,7 @@ function BookingCard({
   index: number;
   onReview: () => void;
 }) {
-  const isCompleted =
-    booking.status === Variant_cancelled_pending_completed_confirmed.completed;
+  const isCompleted = booking.status === "completed";
 
   return (
     <motion.div

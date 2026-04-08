@@ -11,7 +11,6 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
 import {
   useAcceptServiceRequest,
@@ -19,6 +18,7 @@ import {
   useMechanicActiveJob,
   useSearchingRequests,
 } from "../hooks/useQueries";
+import type { UserProfile } from "../types";
 import { playNewRequest } from "../utils/sounds";
 
 function getInitials(name: string) {

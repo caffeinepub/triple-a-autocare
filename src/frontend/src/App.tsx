@@ -6,7 +6,6 @@ import { Clock, LogOut, ShieldX, Wrench } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "./backend";
 import AdminPanel from "./components/AdminPanel";
 import {
   AdminMechanicBottomNav,
@@ -22,6 +21,7 @@ import RoleSelectionScreen from "./components/RoleSelectionScreen";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
+  type ExtendedServiceRequest,
   countUnread,
   useCustomerActiveRequest,
   useGetMessages,
@@ -39,6 +39,7 @@ import MechanicDashboard from "./pages/MechanicDashboard";
 import MechanicEarningsTab from "./pages/MechanicEarningsTab";
 import MechanicJobsTab from "./pages/MechanicJobsTab";
 import ProfileTab from "./pages/ProfileTab";
+import type { UserProfile } from "./types";
 import { setEmailIdentity } from "./utils/emailIdentityStore";
 
 const SEED_KEY = "triple-a-seeded-v1";
@@ -281,7 +282,7 @@ function AppContent() {
   const proactiveRequestId =
     userAppRole === "customer"
       ? (customerActiveReq?.id ?? null)
-      : ((mechanicActiveJobs ?? []).find((j) =>
+      : (((mechanicActiveJobs as ExtendedServiceRequest[]) ?? []).find((j) =>
           CHAT_ACTIVE_STATUSES.includes(j.status as string),
         )?.id ?? null);
   const messageTrackingId = chatState?.requestId ?? proactiveRequestId;
@@ -377,6 +378,7 @@ function AppContent() {
       address: data.address,
       totalRatings: BigInt(0),
       ratingsSum: BigInt(0),
+      verificationStatus: null,
     };
     await saveProfileMutation.mutateAsync(profileData);
     queryClient.setQueryData(["profile"], profileData);
@@ -463,6 +465,8 @@ function AppContent() {
           role: localRole ?? selectedRole,
           totalRatings: BigInt(0),
           ratingsSum: BigInt(0),
+          verificationStatus:
+            (localRole ?? selectedRole) === "mechanic" ? "pending" : "approved",
         }
       : null);
 
@@ -505,6 +509,8 @@ function AppContent() {
             role: roleToSave,
             totalRatings: BigInt(0),
             ratingsSum: BigInt(0),
+            verificationStatus:
+              roleToSave === "mechanic" ? "pending" : "approved",
           };
 
           await saveProfileMutation.mutateAsync(profileData);
@@ -571,7 +577,7 @@ function AppContent() {
   // Admins bypass the gate so they can still access the dashboard + admin panel.
   if (effectiveRole === "mechanic" && !isAdmin) {
     const verificationStatus =
-      (effectiveProfile as any)?.verificationStatus ?? "pending";
+      effectiveProfile?.verificationStatus ?? "pending";
 
     if (verificationStatus === "pending") {
       return <MechanicPendingGate onLogout={handleLogout} />;

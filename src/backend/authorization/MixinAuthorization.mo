@@ -4,6 +4,18 @@ import Runtime "mo:core/Runtime";
 
 mixin (accessControlState : AccessControl.AccessControlState) {
   // Initialize auth (first caller becomes admin, others become users)
+  public shared ({ caller }) func _initializeAccessControl() : async () {
+    switch (Prim.envVar<system>("CAFFEINE_ADMIN_TOKEN")) {
+      case (null) {
+        // No token required — first caller becomes admin
+        AccessControl.initialize(accessControlState, caller, "", "");
+      };
+      case (?adminToken) {
+        AccessControl.initialize(accessControlState, caller, adminToken, adminToken);
+      };
+    };
+  };
+
   public shared ({ caller }) func _initializeAccessControlWithSecret(userSecret : Text) : async () {
     switch (Prim.envVar<system>("CAFFEINE_ADMIN_TOKEN")) {
       case (null) {

@@ -11,8 +11,6 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
-import { Variant_cancelled_pending_completed_confirmed } from "../backend";
 import MechanicRequestModal from "../components/MechanicRequestModal";
 import {
   useCustomerActiveRequest,
@@ -21,6 +19,7 @@ import {
   useMechanics,
   useUserBookings,
 } from "../hooks/useQueries";
+import type { UserProfile } from "../types";
 import {
   playMechanicFound,
   playPriceUpdate,
@@ -157,7 +156,10 @@ export default function HomeTab({ profile }: Props) {
 
   const showRequestStatus = activeRequest && !dismissedRequest;
   const statusDisplay = activeRequest
-    ? getRequestStatusDisplay(activeRequest.status, activeRequest.mechanicName)
+    ? getRequestStatusDisplay(
+        activeRequest.status,
+        activeRequest.mechanicName ?? undefined,
+      )
     : null;
 
   const isPriceSent = activeRequest?.status === "price_sent";
@@ -404,10 +406,8 @@ export default function HomeTab({ profile }: Props) {
             Active Bookings
           </h3>
           {latestBooking &&
-          latestBooking.status !==
-            Variant_cancelled_pending_completed_confirmed.completed &&
-          latestBooking.status !==
-            Variant_cancelled_pending_completed_confirmed.cancelled ? (
+          latestBooking.status !== "completed" &&
+          latestBooking.status !== "cancelled" ? (
             <div
               data-ocid="home.active_booking.card"
               className="bg-card rounded-2xl p-4 border border-border flex items-center gap-3"

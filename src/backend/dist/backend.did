@@ -110,6 +110,7 @@ type Booking =
    userId: principal;
  };
 service : {
+  _initializeAccessControl: () -> ();
   _initializeAccessControlWithSecret: (userSecret: text) -> ();
   acceptServiceRequest: (requestId: text, mechanicName: text) -> ();
   addReview: (mechanicId: text, rating: nat, "text": text) -> ();

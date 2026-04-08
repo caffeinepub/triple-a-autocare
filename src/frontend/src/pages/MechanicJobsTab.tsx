@@ -10,9 +10,8 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Variant_on_the_way_arrived_completed_accepted } from "../backend";
-import type { UserProfile } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import type { Variant_on_the_way_arrived_completed_accepted } from "../hooks/useQueries";
 import type { ExtendedServiceRequest } from "../hooks/useQueries";
 import {
   countUnread,
@@ -26,6 +25,7 @@ import {
   useUpdateServiceRequest,
   useUpdateServiceRequestStatus,
 } from "../hooks/useQueries";
+import type { UserProfile } from "../types";
 import { getEmailIdentity } from "../utils/emailIdentityStore";
 import { playSoftNotification } from "../utils/sounds";
 
@@ -372,11 +372,7 @@ function ActiveJobCard({
             type="button"
             data-ocid="jobs.start_trip.button"
             disabled={updateStatus.isPending}
-            onClick={() =>
-              handleUpdate(
-                Variant_on_the_way_arrived_completed_accepted.on_the_way,
-              )
-            }
+            onClick={() => handleUpdate({ on_the_way: null })}
             className="w-full h-13 py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 shadow-yellow"
           >
             {updateStatus.isPending ? (
@@ -391,11 +387,7 @@ function ActiveJobCard({
             type="button"
             data-ocid="jobs.arrived.button"
             disabled={updateStatus.isPending}
-            onClick={() =>
-              handleUpdate(
-                Variant_on_the_way_arrived_completed_accepted.arrived,
-              )
-            }
+            onClick={() => handleUpdate({ arrived: null })}
             className="w-full h-13 py-3.5 rounded-2xl bg-blue-500 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
           >
             {updateStatus.isPending ? (

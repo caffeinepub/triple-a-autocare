@@ -13,8 +13,8 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
 import { useActor } from "../hooks/useActor";
+import type { UserProfile } from "../types";
 
 type MechanicProfile = UserProfile;
 
@@ -118,7 +118,7 @@ function MechanicCard({
         </div>
 
         <div className="shrink-0">
-          <StatusBadge status={status} />
+          <StatusBadge status={status ?? undefined} />
         </div>
       </div>
 

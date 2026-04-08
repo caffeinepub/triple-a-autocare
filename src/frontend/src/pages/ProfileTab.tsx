@@ -11,7 +11,6 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useCustomerCompletedRequests,
@@ -19,6 +18,7 @@ import {
   useUpdateUserProfile,
   useUserAppRole,
 } from "../hooks/useQueries";
+import type { UserProfile } from "../types";
 import { setEmailIdentity } from "../utils/emailIdentityStore";
 
 interface Props {
@@ -105,7 +105,7 @@ export default function ProfileTab({ profile, isAdmin, onAdminPanel }: Props) {
 
   const [name, setName] = useState(profile.name);
   const [profileImage, setProfileImage] = useState<string | undefined>(
-    profile.profileImage,
+    profile.profileImage ?? undefined,
   );
   const [yearsOfExperience, setYearsOfExperience] = useState<string>(
     profile.yearsOfExperience != null
@@ -119,7 +119,7 @@ export default function ProfileTab({ profile, isAdmin, onAdminPanel }: Props) {
 
   useEffect(() => {
     setName(profile.name);
-    setProfileImage(profile.profileImage);
+    setProfileImage(profile.profileImage ?? undefined);
     setYearsOfExperience(
       profile.yearsOfExperience != null
         ? String(Number(profile.yearsOfExperience))
